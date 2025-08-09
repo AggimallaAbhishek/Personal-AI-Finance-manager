@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Personal Finance Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Firebase Compat SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+
+  <!-- Chart.js for visuals -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <h1>Personal Finance Manager</h1>
+
+  <!-- Logged-in User Info -->
+  <section id="user-info" style="display:none;">
+    <p>Logged in as: <span id="user-email"></span></p>
+    <button onclick="logout()">Logout</button>
+  </section>
+
+  <!-- Auth Section -->
+  <section id="auth-section">
+    <h2>Register</h2>
+    <input type="email" id="reg-email" placeholder="Email" />
+    <input type="password" id="reg-password" placeholder="Password" />
+    <button onclick="register()">Register</button>
+
+    <h2>Login</h2>
+    <input type="text" id="login-email" placeholder="Email" />
+    <input type="password" id="login-password" placeholder="Password" />
+    <button onclick="login()">Login</button>
+  </section>
+
+  <!-- Finance Section (normal users) -->
+  <section id="finance-section" style="display:none;">
+    <h2>Add Income</h2>
+    <input type="text" id="income-source" placeholder="Income Source" />
+    <input type="number" id="income-amount" placeholder="Amount" />
+    <button onclick="addIncome()">Add Income</button>
+
+    <h2>Add Expense</h2>
+    <input type="text" id="expense-description" placeholder="Expense Description" />
+    <input type="text" id="expense-category" placeholder="Category" />
+    <input type="number" id="expense-amount" placeholder="Amount" />
+    <button onclick="addExpense()">Add Expense</button>
+
+    <h2>Set Budget</h2>
+    <input type="text" id="budget-category" placeholder="Budget Category" />
+    <input type="number" id="budget-amount" placeholder="Budget Amount" />
+    <button onclick="setBudget()">Set Budget</button>
+
+    <h2>Summary</h2>
+    <div id="summary"></div>
+
+    <h3>Visualizations</h3>
+    <canvas id="categoryChart" width="400" height="200"></canvas>
+    <canvas id="incomeExpenseChart" width="400" height="200"></canvas>
+  </section>
+
+  <!-- Admin (Master) Section -->
+  <section id="admin-section" style="display:none;">
+    <h2>Admin Panel - All Users Data</h2>
+    <div id="admin-summary"></div>
+  </section>
+
+  <div id="message"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
