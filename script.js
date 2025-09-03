@@ -4,8 +4,10 @@ import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, s
 import { getFirestore, enableIndexedDbPersistence, doc, getDoc, setDoc, updateDoc, addDoc, collection, serverTimestamp, onSnapshot, orderBy, query, getDocs, deleteDoc, runTransaction } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-analytics.js";
 
-const ADMIN_UID = "XmnfOTHAroTqlJE9GEIlu4Vo4Ay1"; 
+// --- App Constants ---
+const ADMIN_UID = "XmnfOTHAroTqlJE9GEIlu4Vo4Ay1";
 
+// --- Firebase Initialization ---
 if (!window.env) {
   console.warn("Using fallback keys for local testing.");
   window.env = {
@@ -41,7 +43,7 @@ try {
   alert("Could not connect to Firebase. Please check your API keys and configuration.");
 }
 
-// ======= DOM ELEMENTS =======
+// ======= DOM ELEMENTS CACHE =======
 const DOM = {
   loginSection: () => document.getElementById('login-section'),
   registerSection: () => document.getElementById('register-section'),
@@ -62,7 +64,6 @@ const DOM = {
   budgetAmount: () => document.getElementById('budget-amount'),
   categoryChart: () => document.getElementById('categoryChart'),
   incomeExpenseChart: () => document.getElementById('incomeExpenseChart'),
-  // Auth form elements
   loginUsername: () => document.getElementById('login-username'),
   loginPassword: () => document.getElementById('login-password'),
   regUsername: () => document.getElementById('reg-username'),
@@ -74,7 +75,7 @@ const DOM = {
   registerBtn: () => document.getElementById('register-btn'),
 };
 
-// ======= STATE & UTILITY =======
+// ======= APPLICATION STATE =======
 let isMaster = false;
 let categoryChartInstance, incomeExpenseChartInstance;
 let editingIncomeId = null, editingExpenseId = null;
@@ -82,35 +83,34 @@ let incomeUnsubscribe, expenseUnsubscribe, budgetUnsubscribe;
 let incomeCache = [], expenseCache = [], budgetCache = {};
 let usernameCheckTimeout;
 
+// ======= CORE UTILITY FUNCTIONS =======
 function showSection(sectionId) {
     const target = document.getElementById(sectionId);
     if (!target) return;
-
     const current = document.querySelector('section:not([style*="display: none"])');
-
     if (current === target) return;
 
     if (current) {
         current.classList.add('section-exit');
-        current.addEventListener('animationend', function handler() {
+        current.addEventListener('animationend', () => {
             current.style.display = 'none';
             current.classList.remove('section-exit');
-            this.removeEventListener('animationend', handler);
         }, { once: true });
     }
 
     const displayType = (sectionId.includes('dashboard') || sectionId.includes('admin')) ? 'flex' : 'block';
-    
-    // Set display to block for auth containers to respect flex centering
-    if (sectionId.includes('login') || sectionId.includes('register')) {
-        target.parentElement.style.display = 'flex';
+    target.style.display = displayType;
+    // For auth pages, ensure the flex container is visible to center the card.
+    if (sectionId === 'login-section' || sectionId === 'register-section') {
+        document.body.style.display = 'flex';
+    } else {
+        document.body.style.display = 'block';
     }
 
-    target.style.display = displayType;
+    target.classList.remove('section-exit');
     target.classList.add('section-enter');
-    target.addEventListener('animationend', function handler() {
+    target.addEventListener('animationend', () => {
         target.classList.remove('section-enter');
-        this.removeEventListener('animationend', handler);
     }, { once: true });
 }
 
@@ -121,28 +121,21 @@ function showMessage(message, isError = false) {
   setTimeout(() => el.classList.remove('show'), 5000);
 }
 
-// ======= AUTHENTICATION =======
+// ======= AUTHENTICATION FUNCTIONS =======
 async function register() {
     const username = DOM.regUsername().value.trim();
     const password = DOM.regPassword().value;
     const confirmPassword = DOM.regConfirmPassword().value;
 
-    if (password !== confirmPassword) {
-        return showMessage("Passwords do not match.", true);
-    }
-    const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*.,?]).{8,}$/;
-    if (!passwordRegex.test(password)) {
-        return showMessage("Password does not meet the requirements.", true);
-    }
+    if (password !== confirmPassword) return showMessage("Passwords do not match.", true);
+    if (!isPasswordValid(password)) return showMessage("Password does not meet requirements.", true);
 
     try {
         const usernameLower = username.toLowerCase();
         const usernameRef = doc(db, 'usernames', usernameLower);
         const docSnap = await getDoc(usernameRef);
 
-        if (docSnap.exists()) {
-            return showMessage("Username is already taken.", true);
-        }
+        if (docSnap.exists()) return showMessage("Username is already taken.", true);
 
         const dummyEmail = `${usernameLower}@pfm.local`;
         const userCredential = await createUserWithEmailAndPassword(auth, dummyEmail, password);
@@ -158,7 +151,7 @@ async function register() {
         showSection('login-section');
     } catch (error) {
         console.error("Registration Error:", error);
-        showMessage(error.message, true);
+        showMessage(getFriendlyAuthError(error.code), true);
     }
 }
 
@@ -166,20 +159,14 @@ async function login() {
     const username = DOM.loginUsername().value.trim();
     const password = DOM.loginPassword().value;
 
-    if (!username || !password) {
-        return showMessage("Please enter username and password.", true);
-    }
+    if (!username || !password) return showMessage("Please enter username and password.", true);
 
     try {
         const dummyEmail = `${username.toLowerCase()}@pfm.local`;
         await signInWithEmailAndPassword(auth, dummyEmail, password);
     } catch (error) {
         console.error("Login Error:", error);
-        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-            showMessage("Invalid username or password.", true);
-        } else {
-            showMessage(error.message, true);
-        }
+        showMessage(getFriendlyAuthError(error.code), true);
     }
 }
 
@@ -188,122 +175,126 @@ function logout() {
     signOut(auth).catch(error => console.error("Logout error:", error));
 }
 
+function getFriendlyAuthError(errorCode) {
+    switch (errorCode) {
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+            return "Invalid username or password.";
+        case 'auth/email-already-in-use':
+            return "An account with this username already exists.";
+        case 'auth/weak-password':
+            return "Password is too weak. Please choose a stronger one.";
+        default:
+            return "An unexpected error occurred. Please try again.";
+    }
+}
 
-// ======= REGISTRATION FORM VALIDATION =======
+// ======= REGISTRATION FORM VALIDATION LOGIC =======
+function isPasswordValid(password) {
+    const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*.,?]).{8,}$/;
+    return passwordRegex.test(password);
+}
+
+async function isUsernameAvailable(username) {
+    if (username.length < 3) return { available: false, message: 'Username must be at least 3 characters.' };
+    const usernameRef = doc(db, 'usernames', username.toLowerCase());
+    const docSnap = await getDoc(usernameRef);
+    if (docSnap.exists()) return { available: false, message: 'Username is already taken.' };
+    return { available: true, message: 'Username is available!' };
+}
+
 function validateRegistrationForm() {
+    clearTimeout(usernameCheckTimeout);
+
     const username = DOM.regUsername().value.trim();
     const password = DOM.regPassword().value;
     const confirmPassword = DOM.regConfirmPassword().value;
 
-    let isUsernameAvailable = false;
-    let isUsernameLengthValid = username.length >= 3;
+    let passwordIsValid = isPasswordValid(password);
+    let passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
+
+    // --- Update UI for password fields instantly ---
+    DOM.passwordRequirements().className = (passwordIsValid || password.length === 0) ? 'input-hint' : 'input-hint error';
+    if(passwordIsValid) DOM.passwordRequirements().className = 'input-hint success';
     
-    if (isUsernameLengthValid) {
-        DOM.usernameStatus().textContent = 'Checking...';
-        DOM.usernameStatus().className = 'input-hint';
-        clearTimeout(usernameCheckTimeout);
-        usernameCheckTimeout = setTimeout(async () => {
-            const usernameRef = doc(db, 'usernames', username.toLowerCase());
-            const docSnap = await getDoc(usernameRef);
-            if (docSnap.exists()) {
-                DOM.usernameStatus().textContent = 'Username is already taken.';
-                DOM.usernameStatus().className = 'input-hint error';
-                isUsernameAvailable = false;
-            } else {
-                DOM.usernameStatus().textContent = 'Username is available!';
-                DOM.usernameStatus().className = 'input-hint success';
-                isUsernameAvailable = true;
-            }
-            checkAllFields();
-        }, 500);
-    } else {
-        DOM.usernameStatus().textContent = 'Username must be at least 3 characters.';
-        DOM.usernameStatus().className = 'input-hint error';
-        isUsernameAvailable = false;
-    }
-
-    const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*.,?]).{8,}$/;
-    const isPasswordValid = passwordRegex.test(password);
-    DOM.passwordRequirements().className = isPasswordValid ? 'input-hint success' : 'input-hint';
-    if (!isPasswordValid && password.length > 0) {
-        DOM.passwordRequirements().className = 'input-hint error';
-    }
-
-
-    const doPasswordsMatch = password === confirmPassword && confirmPassword.length > 0;
     if (confirmPassword.length > 0) {
-        DOM.confirmPasswordStatus().textContent = doPasswordsMatch ? 'Passwords match.' : 'Passwords do not match.';
-        DOM.confirmPasswordStatus().className = doPasswordsMatch ? 'input-hint success' : 'input-hint error';
+        DOM.confirmPasswordStatus().textContent = passwordsMatch ? 'Passwords match.' : 'Passwords do not match.';
+        DOM.confirmPasswordStatus().className = passwordsMatch ? 'input-hint success' : 'input-hint error';
     } else {
-         DOM.confirmPasswordStatus().textContent = '';
+        DOM.confirmPasswordStatus().textContent = '';
     }
 
-    function checkAllFields() {
-       DOM.registerBtn().disabled = !(isUsernameAvailable && isPasswordValid && doPasswordsMatch);
-    }
-    // We call this here for immediate feedback on password fields, 
-    // and rely on the async check to handle the username part.
-    checkAllFields(); 
+    // --- Debounced username check ---
+    DOM.registerBtn().disabled = true; // Disable button until checks pass
+    DOM.usernameStatus().textContent = 'Checking...';
+    DOM.usernameStatus().className = 'input-hint';
+
+    usernameCheckTimeout = setTimeout(async () => {
+        const usernameStatus = await isUsernameAvailable(username);
+        DOM.usernameStatus().textContent = usernameStatus.message;
+        DOM.usernameStatus().className = usernameStatus.available ? 'input-hint success' : 'input-hint error';
+        
+        // --- Final check to enable/disable button ---
+        DOM.registerBtn().disabled = !(usernameStatus.available && passwordIsValid && passwordsMatch);
+    }, 500);
 }
-
 
 // ======= FINANCE & DATA FUNCTIONS =======
 function resetFinanceInputs() {
-  document.querySelectorAll('.form-card input').forEach(input => input.value = '');
-  DOM.addIncomeBtn().textContent = 'Add Income';
-  DOM.addExpenseBtn().textContent = 'Add Expense';
-  editingIncomeId = null;
-  editingExpenseId = null;
+    document.querySelectorAll('.form-card input').forEach(input => input.value = '');
+    DOM.addIncomeBtn().textContent = 'Add Income';
+    DOM.addExpenseBtn().textContent = 'Add Expense';
+    editingIncomeId = null;
+    editingExpenseId = null;
 }
 
 async function addOrUpdateEntry(type, data, id) {
     const userId = auth.currentUser?.uid;
     if (!userId) return showMessage('Not logged in.', true);
-  
     const collectionName = type === 'income' ? 'income' : 'expenses';
     try {
-      if (id) {
-        await updateDoc(doc(db, 'users', userId, collectionName, id), data);
-      } else {
-        data.date = serverTimestamp();
-        await addDoc(collection(db, 'users', userId, collectionName), data);
-      }
-      showMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} saved successfully!`);
-      resetFinanceInputs();
+        if (id) {
+            await updateDoc(doc(db, 'users', userId, collectionName, id), data);
+        } else {
+            data.date = serverTimestamp();
+            await addDoc(collection(db, 'users', userId, collectionName), data);
+        }
+        showMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} saved successfully!`);
+        resetFinanceInputs();
     } catch (error) {
-      showMessage(`Failed to save ${type}: ${error.message}`, true);
+        showMessage(`Failed to save ${type}: ${error.message}`, true);
     }
 }
 
 function startEditIncome(id, amount, source) {
-  DOM.incomeSource().value = source;
-  DOM.incomeAmount().value = amount;
-  DOM.addIncomeBtn().textContent = 'Update Income';
-  editingIncomeId = id;
-  DOM.incomeSource().focus();
+    DOM.incomeSource().value = source;
+    DOM.incomeAmount().value = amount;
+    DOM.addIncomeBtn().textContent = 'Update Income';
+    editingIncomeId = id;
+    DOM.incomeSource().focus();
 }
 
 function startEditExpense(id, amount, description, category) {
-  DOM.expenseDescription().value = description;
-  DOM.expenseCategory().value = category;
-  DOM.expenseAmount().value = amount;
-  DOM.addExpenseBtn().textContent = 'Update Expense';
-  editingExpenseId = id;
-  DOM.expenseDescription().focus();
+    DOM.expenseDescription().value = description;
+    DOM.expenseCategory().value = category;
+    DOM.expenseAmount().value = amount;
+    DOM.addExpenseBtn().textContent = 'Update Expense';
+    editingExpenseId = id;
+    DOM.expenseDescription().focus();
 }
 
 async function deleteEntry(type, id) {
-  if (!confirm(`Are you sure you want to delete this ${type} entry?`)) return;
-  const userId = auth.currentUser?.uid;
-  if (!userId) return;
-
-  const collectionName = type === 'income' ? 'income' : 'expenses';
-  try {
-    await deleteDoc(doc(db, 'users', userId, collectionName, id));
-    showMessage(`${type} entry deleted.`);
-  } catch (error) {
-    showMessage(`Failed to delete ${type}: ${error.message}`, true);
-  }
+    if (!confirm(`Are you sure you want to delete this ${type} entry?`)) return;
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+    const collectionName = type === 'income' ? 'income' : 'expenses';
+    try {
+        await deleteDoc(doc(db, 'users', userId, collectionName, id));
+        showMessage(`${type} entry deleted.`);
+    } catch (error) {
+        showMessage(`Failed to delete ${type}: ${error.message}`, true);
+    }
 }
 
 async function setBudget() {
@@ -311,30 +302,29 @@ async function setBudget() {
     const amount = parseFloat(DOM.budgetAmount().value);
     const userId = auth.currentUser?.uid;
     if (!userId || !category || isNaN(amount) || amount <= 0) {
-      return showMessage('Please provide a valid category and amount.', true);
+        return showMessage('Please provide a valid category and amount.', true);
     }
     try {
-      await setDoc(doc(db, 'users', userId, 'budgets', category), { amount });
-      showMessage('Budget set successfully!');
-      resetFinanceInputs();
+        await setDoc(doc(db, 'users', userId, 'budgets', category), { amount });
+        showMessage('Budget set successfully!');
+        resetFinanceInputs();
     } catch (error) {
-      showMessage(`Failed to set budget: ${error.message}`, true);
+        showMessage(`Failed to set budget: ${error.message}`, true);
     }
 }
 
+// ======= DATA RENDERING FUNCTIONS =======
 function attachRealtimeListeners(userId) {
     if (incomeUnsubscribe) incomeUnsubscribe();
     if (expenseUnsubscribe) expenseUnsubscribe();
     if (budgetUnsubscribe) budgetUnsubscribe();
 
     if (!userId) {
-        incomeCache = [], expenseCache = [], budgetCache = {};
+        incomeCache = []; expenseCache = []; budgetCache = {};
         renderFromCaches();
         return;
     }
-
     const render = () => renderFromCaches();
-
     incomeUnsubscribe = onSnapshot(query(collection(db, 'users', userId, 'income'), orderBy('date', 'desc')), (snapshot) => {
         incomeCache = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         render();
@@ -355,11 +345,18 @@ function renderFromCaches() {
 
     const createListItemHTML = (item, type) => {
         const amount = item.amount || 0;
-        const base = `<li><span>${type === 'income' ? item.source : `${item.description} (${item.category || 'Other'})`}: $${amount.toFixed(2)}</span>`;
-        const buttons = `<span class="entry-buttons"><button class="edit-btn" data-id="${item.id}"><i class="fas fa-pen"></i></button><button class="delete-btn" data-id="${item.id}"><i class="fas fa-trash"></i></button></span></li>`;
-        if (type === 'income') { totalIncome += amount; incomeMonthly[getMonthKey(item.date)] = (incomeMonthly[getMonthKey(item.date)] || 0) + amount; }
-        else { totalExpense += amount; const category = item.category || 'Other'; categoryTotals[category] = (categoryTotals[category] || 0) + amount; expenseMonthly[getMonthKey(item.date)] = (expenseMonthly[getMonthKey(item.date)] || 0) + amount; }
-        return base + buttons;
+        const name = type === 'income' ? item.source : `${item.description} (${item.category || 'Other'})`;
+        const buttons = `<span class="entry-buttons"><button class="edit-btn" data-id="${item.id}" aria-label="Edit"><i class="fas fa-pen"></i></button><button class="delete-btn" data-id="${item.id}" aria-label="Delete"><i class="fas fa-trash"></i></button></span>`;
+        if (type === 'income') {
+            totalIncome += amount;
+            incomeMonthly[getMonthKey(item.date)] = (incomeMonthly[getMonthKey(item.date)] || 0) + amount;
+        } else {
+            totalExpense += amount;
+            const category = item.category || 'Other';
+            categoryTotals[category] = (categoryTotals[category] || 0) + amount;
+            expenseMonthly[getMonthKey(item.date)] = (expenseMonthly[getMonthKey(item.date)] || 0) + amount;
+        }
+        return `<li><span>${name}: $${amount.toFixed(2)}</span>${buttons}</li>`;
     };
     
     DOM.incomeList().innerHTML = incomeCache.map(item => createListItemHTML(item, 'income')).join('') || "<li>No income recorded.</li>";
@@ -370,102 +367,102 @@ function renderFromCaches() {
 }
 
 function updateSummary(totalIncome, totalExpense, budgets, categoryTotals) {
-  const balance = totalIncome - totalExpense;
-  DOM.summaryDiv().innerHTML = `<p>Total Income: $${totalIncome.toFixed(2)}</p><p>Total Expense: $${totalExpense.toFixed(2)}</p><p>Balance: $${balance.toFixed(2)}</p><h3>Budgets:</h3><ul>` +
-  (Object.keys(budgets).length === 0 ? '<li>No budgets set.</li>' : Object.entries(budgets).map(([category, limit]) => {
-      const spent = categoryTotals[category] || 0;
-      const percentage = limit > 0 ? Math.min(100, (spent / limit) * 100) : 0;
-      const budgetClass = percentage >= 100 ? 'budget-bar-red' : percentage >= 90 ? 'budget-bar-yellow' : 'budget-bar-green';
-      return `<li><span>${category}: $${limit.toFixed(2)}</span><div class="budget-bar-container"><div class="budget-bar-fill ${budgetClass}" style="width:${percentage}%;"></div></div><small>Used: $${spent.toFixed(2)} (${percentage.toFixed(1)}%)</small></li>`;
-  }).join('')) + '</ul>';
+    const balance = totalIncome - totalExpense;
+    const budgetsHTML = Object.keys(budgets).length === 0 ? '<li>No budgets set.</li>' : Object.entries(budgets).map(([category, limit]) => {
+        const spent = categoryTotals[category] || 0;
+        const percentage = limit > 0 ? Math.min(100, (spent / limit) * 100) : 0;
+        const budgetClass = percentage >= 100 ? 'budget-bar-red' : percentage >= 90 ? 'budget-bar-yellow' : 'budget-bar-green';
+        return `<li><span>${category}: $${limit.toFixed(2)}</span><div class="budget-bar-container"><div class="budget-bar-fill ${budgetClass}" style="width:${percentage}%;"></div></div><small>Used: $${spent.toFixed(2)} (${percentage.toFixed(1)}%)</small></li>`;
+    }).join('');
+    DOM.summaryDiv().innerHTML = `<p>Total Income: $${totalIncome.toFixed(2)}</p><p>Total Expense: $${totalExpense.toFixed(2)}</p><p>Balance: $${balance.toFixed(2)}</p><h3>Budgets:</h3><ul>${budgetsHTML}</ul>`;
 }
 
 function updateCharts(categoryTotals, incomeMonthly, expenseMonthly) {
     if (categoryChartInstance) categoryChartInstance.destroy();
     if (incomeExpenseChartInstance) incomeExpenseChartInstance.destroy();
     
-    if(DOM.categoryChart()) categoryChartInstance = new Chart(DOM.categoryChart().getContext('2d'), { type: 'pie', data: { labels: Object.keys(categoryTotals), datasets: [{ data: Object.values(categoryTotals), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'] }] } });
-
-    if(DOM.incomeExpenseChart()) {
-      const months = [...new Set([...Object.keys(incomeMonthly), ...Object.keys(expenseMonthly)])].sort();
-      incomeExpenseChartInstance = new Chart(DOM.incomeExpenseChart().getContext('2d'), { type: 'line', data: { labels: months, datasets: [ { label: 'Income', data: months.map(m => incomeMonthly[m] || 0), borderColor: '#36A2EB', fill: false }, { label: 'Expense', data: months.map(m => expenseMonthly[m] || 0), borderColor: '#FF6384', fill: false } ] }, options: { scales: { y: { beginAtZero: true } } } });
+    if (DOM.categoryChart()) categoryChartInstance = new Chart(DOM.categoryChart().getContext('2d'), { type: 'pie', data: { labels: Object.keys(categoryTotals), datasets: [{ data: Object.values(categoryTotals), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'] }] } });
+    
+    if (DOM.incomeExpenseChart()) {
+        const months = [...new Set([...Object.keys(incomeMonthly), ...Object.keys(expenseMonthly)])].sort();
+        incomeExpenseChartInstance = new Chart(DOM.incomeExpenseChart().getContext('2d'), { type: 'line', data: { labels: months, datasets: [{ label: 'Income', data: months.map(m => incomeMonthly[m] || 0), borderColor: '#36A2EB', fill: false }, { label: 'Expense', data: months.map(m => expenseMonthly[m] || 0), borderColor: '#FF6384', fill: false }] }, options: { scales: { y: { beginAtZero: true } } } });
     }
 }
 
 async function loadAllUsersData() { /* ... unchanged ... */ }
 
-// ======= EVENT LISTENERS & INITIALIZATION =======
+// ======= EVENT LISTENERS INITIALIZATION =======
+function initializeEventListeners() {
+    document.getElementById('show-register').addEventListener('click', (e) => { e.preventDefault(); showSection('register-section'); });
+    document.getElementById('show-login').addEventListener('click', (e) => { e.preventDefault(); showSection('login-section'); });
+    document.getElementById('login-btn').addEventListener('click', login);
+    document.getElementById('register-btn').addEventListener('click', register);
+    document.getElementById('logout-btn').addEventListener('click', logout);
+    document.getElementById('logout-btn-admin')?.addEventListener('click', logout);
+
+    DOM.regUsername().addEventListener('input', validateRegistrationForm);
+    DOM.regPassword().addEventListener('input', validateRegistrationForm);
+    DOM.regConfirmPassword().addEventListener('input', validateRegistrationForm);
+
+    document.getElementById('add-income-btn')?.addEventListener('click', () => {
+        const data = { source: DOM.incomeSource().value.trim(), amount: parseFloat(DOM.incomeAmount().value) };
+        if (!data.source || isNaN(data.amount) || data.amount <= 0) return showMessage('Invalid income data.', true);
+        addOrUpdateEntry('income', data, editingIncomeId);
+    });
+    document.getElementById('add-expense-btn')?.addEventListener('click', () => {
+        const data = { description: DOM.expenseDescription().value.trim(), category: DOM.expenseCategory().value.trim() || 'Other', amount: parseFloat(DOM.expenseAmount().value) };
+        if (!data.description || isNaN(data.amount) || data.amount <= 0) return showMessage('Invalid expense data.', true);
+        addOrUpdateEntry('expense', data, editingExpenseId);
+    });
+    document.getElementById('set-budget-btn')?.addEventListener('click', setBudget);
+
+    const listActionHandler = (e, type, cache) => {
+        const button = e.target.closest('button');
+        if (!button) return;
+        const id = button.dataset.id;
+        const item = cache.find(i => i.id === id);
+        if (!item) return;
+        if (button.classList.contains('edit-btn')) {
+            if (type === 'income') startEditIncome(id, item.amount, item.source);
+            else startEditExpense(id, item.amount, item.description, item.category);
+        }
+        if (button.classList.contains('delete-btn')) deleteEntry(type, id);
+    };
+    DOM.incomeList().addEventListener('click', (e) => listActionHandler(e, 'income', incomeCache));
+    DOM.expenseList().addEventListener('click', (e) => listActionHandler(e, 'expense', expenseCache));
+}
+
+// ======= MAIN APP LOGIC =======
 document.addEventListener("DOMContentLoaded", () => {
-  if (!auth) return;
-  DOM.loginSection().style.display = 'block'; // Start on login page
-  document.body.classList.add('auth-active');
-
-  document.getElementById('show-register').addEventListener('click', (e) => { e.preventDefault(); showSection('register-section'); });
-  document.getElementById('show-login').addEventListener('click', (e) => { e.preventDefault(); showSection('login-section'); });
-
-  document.getElementById('login-btn').addEventListener('click', login);
-  document.getElementById('register-btn').addEventListener('click', register);
-  document.getElementById('logout-btn').addEventListener('click', logout);
-  document.getElementById('logout-btn-admin')?.addEventListener('click', logout);
-
-  DOM.regUsername().addEventListener('input', validateRegistrationForm);
-  DOM.regPassword().addEventListener('input', validateRegistrationForm);
-  DOM.regConfirmPassword().addEventListener('input', validateRegistrationForm);
-
-  const addIncomeBtn = document.getElementById('add-income-btn');
-  if(addIncomeBtn) addIncomeBtn.addEventListener('click', () => {
-    const data = { source: DOM.incomeSource().value.trim(), amount: parseFloat(DOM.incomeAmount().value) };
-    if (!data.source || isNaN(data.amount) || data.amount <= 0) return showMessage('Invalid income data.', true);
-    addOrUpdateEntry('income', data, editingIncomeId);
-  });
-
-  const addExpenseBtn = document.getElementById('add-expense-btn');
-  if(addExpenseBtn) addExpenseBtn.addEventListener('click', () => {
-    const data = { description: DOM.expenseDescription().value.trim(), category: DOM.expenseCategory().value.trim() || 'Other', amount: parseFloat(DOM.expenseAmount().value) };
-    if (!data.description || isNaN(data.amount) || data.amount <= 0) return showMessage('Invalid expense data.', true);
-    addOrUpdateEntry('expense', data, editingExpenseId);
-  });
-  
-  document.getElementById('set-budget-btn')?.addEventListener('click', setBudget);
-  
-  const listActionHandler = (e, type, cache) => {
-    const button = e.target.closest('button');
-    if (!button) return;
-    const id = button.dataset.id;
-    const item = cache.find(i => i.id === id);
-    if (!item) return;
-    if (button.classList.contains('edit-btn')) {
-        if (type === 'income') startEditIncome(id, item.amount, item.source);
-        else startEditExpense(id, item.amount, item.description, item.category);
-    }
-    if (button.classList.contains('delete-btn')) deleteEntry(type, id);
-  };
-  DOM.incomeList().addEventListener('click', (e) => listActionHandler(e, 'income', incomeCache));
-  DOM.expenseList().addEventListener('click', (e) => listActionHandler(e, 'expense', expenseCache));
+    if (!auth) return;
+    DOM.loginSection().style.display = 'block';
+    document.body.classList.add('auth-active');
+    initializeEventListeners();
 });
 
 onAuthStateChanged(auth, async (user) => {
-  if (user && user.uid === ADMIN_UID) {
-    isMaster = true;
-    showSection('admin-section');
-    document.body.classList.remove('auth-active');
-    loadAllUsersData();
-    return;
-  }
-  
-  isMaster = false;
-  if (user) {
-    const userDoc = await getDoc(doc(db, "users", user.uid));
-    if (userDoc.exists()) {
-        DOM.userDisplayName().textContent = userDoc.data().username;
+    if (user && user.uid === ADMIN_UID) {
+        isMaster = true;
+        showSection('admin-section');
+        document.body.classList.remove('auth-active');
+        document.body.style.overflowY = 'auto';
+        loadAllUsersData();
+    } else if (user) {
+        isMaster = false;
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+            DOM.userDisplayName().textContent = userDoc.data().username;
+        }
+        showSection('dashboard');
+        document.body.classList.remove('auth-active');
+        document.body.style.overflowY = 'auto';
+        attachRealtimeListeners(user.uid);
+    } else {
+        isMaster = false;
+        showSection('login-section');
+        document.body.classList.add('auth-active');
+        document.body.style.overflowY = 'hidden';
+        attachRealtimeListeners(null);
     }
-    showSection('dashboard');
-    document.body.classList.remove('auth-active');
-    attachRealtimeListeners(user.uid);
-  } else {
-    showSection('login-section');
-    document.body.classList.add('auth-active');
-    attachRealtimeListeners(null);
-  }
 });
 
