@@ -6,7 +6,7 @@ import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.1/firebase
 
 // IMPORTANT: For admin access, find your UID in the Firebase console (Authentication tab)
 // and paste it here.
-const ADMIN_UID = "REPLACE_WITH_YOUR_ADMIN_FIREBASE_UID"; 
+const ADMIN_UID = "XmnfOTHAroTqlJE9GEIlu4Vo4Ay1"; 
 
 // Fallback for local development if environment variables aren't set
 if (!window.env) {
