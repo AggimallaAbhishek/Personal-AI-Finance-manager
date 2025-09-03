@@ -8,7 +8,21 @@ import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.1/firebase
 // and paste it here.
 const ADMIN_UID = "REPLACE_WITH_YOUR_ADMIN_FIREBASE_UID"; 
 
-// SECURE: Keys are read from environment variables injected by Netlify
+// Fallback for local development if environment variables aren't set
+if (!window.env) {
+  console.warn("`window.env` is not set. Using placeholder keys. This will fail unless you replace them for local testing.");
+  window.env = {
+    FIREBASE_API_KEY: "YOUR_LOCAL_API_KEY",
+    FIREBASE_AUTH_DOMAIN: "YOUR_LOCAL_AUTH_DOMAIN",
+    FIREBASE_PROJECT_ID: "YOUR_LOCAL_PROJECT_ID",
+    FIREBASE_STORAGE_BUCKET: "YOUR_LOCAL_STORAGE_BUCKET",
+    FIREBASE_MESSAGING_SENDER_ID: "YOUR_LOCAL_MESSAGING_SENDER_ID",
+    FIREBASE_APP_ID: "YOUR_LOCAL_APP_ID",
+    FIREBASE_MEASUREMENT_ID: "YOUR_LOCAL_MEASUREMENT_ID"
+  };
+}
+
+// SECURE: Keys are read from environment variables
 const firebaseConfig = {
   apiKey: window.env.FIREBASE_API_KEY,
   authDomain: window.env.FIREBASE_AUTH_DOMAIN,
@@ -19,15 +33,21 @@ const firebaseConfig = {
   measurementId: window.env.FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-const auth = getAuth(app);
-const db = getFirestore(app);
+// Initialize Firebase with error handling
+let app, analytics, auth, db;
+try {
+  app = initializeApp(firebaseConfig);
+  analytics = getAnalytics(app);
+  auth = getAuth(app);
+  db = getFirestore(app);
+  enableIndexedDbPersistence(db).catch(error => {
+    console.warn('Firestore persistence not enabled:', error?.code || error?.message || error);
+  });
+} catch (error) {
+  console.error("Firebase initialization failed:", error);
+  alert("Firebase configuration is missing or invalid. The app will not work. Please check your API keys.");
+}
 
-enableIndexedDbPersistence(db).catch(error => {
-  console.warn('Firestore persistence not enabled:', error?.code || error?.message || error);
-});
 
 // ======= DOM ELEMENTS =======
 const DOM = {
@@ -124,6 +144,7 @@ function toggleTheme() {
 
 // ======= AUTHENTICATION FUNCTIONS =======
 async function signInWithGoogle() {
+  if (!auth) return showMessage("Firebase is not initialized. Check your API keys.", true);
   const provider = new GoogleAuthProvider();
   try {
     const result = await signInWithPopup(auth, provider);
@@ -302,6 +323,42 @@ function updateCharts(categoryTotals, incomeMonthly, expenseMonthly) {
     }
 }
 
+// ======= ADMIN FUNCTIONS (Restored) =======
+async function loadAllUsersData() {
+    DOM.adminSummaryDiv().innerHTML = 'Loading user data...';
+    try {
+        const usersSnapshot = await getDocs(collection(db, 'users'));
+        DOM.adminSummaryDiv().innerHTML = '';
+        if (usersSnapshot.empty) {
+            DOM.adminSummaryDiv().innerHTML = '<p>No user data found.</p>';
+            return;
+        }
+        for (const userDoc of usersSnapshot.docs) {
+             const userId = userDoc.id;
+             const [incomesSnapshot, expensesSnapshot] = await Promise.all([
+                 getDocs(collection(db, "users", userId, "income")),
+                 getDocs(collection(db, "users", userId, "expenses"))
+             ]);
+             
+             let totalIncome = 0, totalExpense = 0;
+             incomesSnapshot.forEach(doc => totalIncome += doc.data().amount || 0);
+             expensesSnapshot.forEach(doc => totalExpense += doc.data().amount || 0);
+
+             const userCard = document.createElement('div');
+             userCard.className = 'card admin-user-card';
+             userCard.dataset.userid = userId;
+             userCard.innerHTML = `
+                 <strong>User ID:</strong> ${escapeHTML(userId)}<br>
+                 <strong>Email:</strong> ${escapeHTML(userDoc.data().email)}<br>
+                 Income: $${totalIncome.toFixed(2)}, Expense: $${totalExpense.toFixed(2)}`;
+             DOM.adminSummaryDiv().appendChild(userCard);
+        }
+    } catch (error) {
+        showMessage(`Failed to load admin data: ${error.message}`, true);
+        console.error("Admin data load error:", error);
+    }
+}
+
 // ======= EVENT LISTENERS & INITIALIZATION =======
 document.addEventListener("DOMContentLoaded", () => {
   showSection('auth-section');
@@ -353,6 +410,7 @@ onAuthStateChanged(auth, user => {
   if (user && user.uid === ADMIN_UID) {
     isMaster = true;
     showSection('admin-section');
+    loadAllUsersData();
     document.body.classList.remove('auth-active');
     return;
   }
