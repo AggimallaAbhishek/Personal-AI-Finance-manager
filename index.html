@@ -2,75 +2,235 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Personal Finance Manager</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Personal Finance Manager</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  
   <link rel="stylesheet" href="style.css" />
-
-  <!-- Firebase Compat SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-
-  <!-- Chart.js for visuals -->
+  
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-  <h1>Personal Finance Manager</h1>
-
-  <!-- Logged-in User Info -->
-  <section id="user-info" style="display:none;">
-    <p>Logged in as: <span id="user-email"></span></p>
-    <button onclick="logout()">Logout</button>
+  <!-- New Unified Authentication Section -->
+  <section id="auth-section" class="auth-container">
+    <div class="auth-card">
+      <h1 class="logo">
+        <i class="fa-solid fa-wallet"></i> Personal Finance Manager
+      </h1>
+      <h2>Welcome Back</h2>
+      <p>Sign in with your Google account to continue.</p>
+      <button id="google-signin-btn" class="google-btn">
+        <svg aria-hidden="true" class="native-svg" height="20" viewBox="0 0 20 20" width="20"><g fill="none" fill-rule="evenodd"><path d="M19.988 10.183c0-.72-.065-1.417-.183-2.105H10.22v3.97h5.496a4.832 4.832 0 01-2.094 3.178v2.58h3.31c1.943-1.783 3.065-4.48 3.065-7.623z" fill="#4285F4"></path><path d="M10.22 20c2.793 0 5.14-0.927 6.853-2.51l-3.31-2.58a5.41 5.41 0 01-3.543 1.28c-2.723 0-5.02-1.843-5.84-4.328H0.957v2.66A9.99 9.99 0 0010.22 20z" fill="#34A853"></path><path d="M4.38 11.843a5.92 5.92 0 010-3.686V5.497H0.957a9.99 9.99 0 000 9.006l3.423-2.66z" fill="#FBBC05"></path><path d="M10.22 4.352c1.518 0 2.885 0.52 3.963 1.53l2.93-2.93C15.356 1.183 12.99 0 10.22 0A9.99 9.99 0 000.957 5.497l3.423 2.66c0.82-2.484 3.117-4.328 5.84-4.328z" fill="#EA4335"></path></g></svg>
+        <span>Sign in with Google</span>
+      </button>
+    </div>
   </section>
 
-  <!-- Auth Section -->
-  <section id="auth-section">
-    <h2>Register</h2>
-    <input type="email" id="reg-email" placeholder="Email" />
-    <input type="password" id="reg-password" placeholder="Password" />
-    <button onclick="register()">Register</button>
+  <!-- Dashboard Section (Remains Mostly the Same) -->
+  <section id="dashboard" class="dashboard-section" style="display:none;">
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo-container">
+          <i class="fa-solid fa-wallet logo-icon"></i>
+          <h1 class="logo-text">Personal Finance Manager</h1>
+        </div>
+        <nav class="main-nav">
+          <a href="#" class="nav-link active" data-section="overview">
+            <i class="fa-solid fa-chart-pie"></i>
+            <span>Overview</span>
+          </a>
+          <a href="#" class="nav-link" data-section="transactions">
+            <i class="fa-solid fa-exchange-alt"></i>
+            <span>Transactions</span>
+          </a>
+          <a href="#" class="nav-link" data-section="budgets">
+            <i class="fa-solid fa-bullseye"></i>
+            <span>Budgets</span>
+          </a>
+          <a href="#" class="nav-link" data-section="reports">
+            <i class="fa-solid fa-chart-bar"></i>
+            <span>Reports</span>
+          </a>
+        </nav>
+      </div>
+      
+      <div class="header-right">
+        <div class="user-info">
+          <div class="user-avatar">
+            <!-- Updated to show profile picture -->
+            <img id="user-avatar-img" src="" alt="User Avatar" />
+          </div>
+          <div class="user-details">
+            <!-- Updated to show display name -->
+            <span class="user-name" id="user-display-name"></span>
+            <span class="user-status">Online</span>
+          </div>
+        </div>
+        
+        <div class="header-actions">
+          <button class="action-btn" id="notifications-btn" title="Notifications">
+            <i class="fa-solid fa-bell"></i>
+            <span class="notification-badge">3</span>
+          </button>
+          <button class="action-btn" id="theme-toggle" title="Toggle Theme">
+            <i class="fa-solid fa-moon"></i>
+          </button>
+          <div class="user-menu">
+            <button class="action-btn user-menu-toggle" title="User Menu">
+              <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            <div class="user-dropdown">
+              <a href="#" class="dropdown-item">
+                <i class="fa-solid fa-user-cog"></i>
+                <span>Profile Settings</span>
+              </a>
+              <a href="#" class="dropdown-item">
+                <i class="fa-solid fa-cog"></i>
+                <span>Preferences</span>
+              </a>
+              <a href="#" class="dropdown-item" onclick="exportData()">
+                <i class="fa-solid fa-download"></i>
+                <span>Export Data</span>
+              </a>
+              <div class="dropdown-divider"></div>
+              <a href="#" class="dropdown-item" id="logout-btn">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                <span>Logout</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
 
-    <h2>Login</h2>
-    <input type="text" id="login-email" placeholder="Email" />
-    <input type="password" id="login-password" placeholder="Password" />
-    <button onclick="login()">Login</button>
+    <main class="dashboard-container">
+      <div class="card summary-card">
+        <span class="card-badge">Overview</span>
+        <h2>Financial Overview</h2>
+        <div id="summary"></div>
+        <div class="chart-container">
+          <canvas id="incomeExpenseChart"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="categoryChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card form-card">
+        <span class="card-badge">Forms</span>
+        <div class="form-group">
+          <h2>
+            <i class="fa-solid fa-circle-plus"></i> Add Income
+          </h2>
+          <label for="income-source" class="field-label">Source</label>
+          <input type="text" id="income-source" placeholder="Income Source" required />
+          <label for="income-amount" class="field-label">Amount</label>
+          <input type="number" id="income-amount" placeholder="Amount" min="0" step="0.01" required />
+          <button id="add-income-btn" class="form-btn">Add Income</button>
+        </div>
+        
+        <div class="form-group">
+          <h2>
+            <i class="fa-solid fa-minus-circle"></i> Add Expense
+          </h2>
+          <label for="expense-description" class="field-label">Description</label>
+          <input type="text" id="expense-description" placeholder="Expense Description" required />
+          <label for="expense-category" class="field-label">Category</label>
+          <input type="text" id="expense-category" placeholder="Category" required />
+          <label for="expense-amount" class="field-label">Amount</label>
+          <input type="number" id="expense-amount" placeholder="Amount" min="0" step="0.01" required />
+          <button id="add-expense-btn" class="form-btn">Add Expense</button>
+        </div>
+
+        <div class="form-group">
+          <h2>
+            <i class="fa-solid fa-bullseye"></i> Set Budget
+          </h2>
+          <label for="budget-category" class="field-label">Budget Category</label>
+          <input type="text" id="budget-category" placeholder="Budget Category" required />
+          <label for="budget-amount" class="field-label">Budget Amount</label>
+          <input type="number" id="budget-amount" placeholder="Budget Amount" min="0" step="0.01" required />
+          <button id="set-budget-btn" class="form-btn">Set Budget</button>
+        </div>
+      </div>
+      
+      <div class="card entries-card">
+        <span class="card-badge">Entries</span>
+        <h3>Income Entries</h3>
+        <ul id="income-list" class="entry-list"></ul>
+        
+        <h3>Expense Entries</h3>
+        <ul id="expense-list" class="entry-list"></ul>
+      </div>
+    </main>
+
+    <footer class="dashboard-footer">
+      <div class="footer-container">
+        <div class="footer-section">
+          <h3><i class="fa-solid fa-circle-info"></i> About</h3>
+          <p>Personal Finance Manager helps you track income, expenses, and budgets in one place.</p>
+          <div class="footer-links">
+            <a href="#" class="footer-link" onclick="showHelp('features')"><i class="fa-solid fa-star"></i> Features</a>
+            <a href="#" class="footer-link" onclick="showHelp('privacy')"><i class="fa-solid fa-shield-halved"></i> Privacy</a>
+          </div>
+        </div>
+        <div class="footer-section">
+          <h3><i class="fa-solid fa-question-circle"></i> Help & Support</h3>
+          <div class="footer-links">
+            <a href="#" class="footer-link" onclick="showHelp('getting-started')"><i class="fa-solid fa-play"></i> Getting Started</a>
+            <a href="#" class="footer-link" onclick="showHelp('faq')"><i class="fa-solid fa-comments"></i> FAQ</a>
+          </div>
+        </div>
+        <div class="footer-section">
+          <h3><i class="fa-solid fa-envelope"></i> Contact & Tools</h3>
+          <div class="footer-links">
+            <a href="#" class="footer-link" onclick="showContact()"><i class="fa-solid fa-envelope"></i> Contact Us</a>
+            <a href="#" class="footer-link" onclick="exportData()"><i class="fa-solid fa-download"></i> Export Data</a>
+          </div>
+        </div>
+        <div class="footer-section">
+          <h3><i class="fa-solid fa-chart-line"></i> Quick Actions</h3>
+          <div class="footer-links">
+            <a href="#" class="footer-link" onclick="showIncomeForm()"><i class="fa-solid fa-plus"></i> Add Income</a>
+            <a href="#" class="footer-link" onclick="showExpenseForm()"><i class="fa-solid fa-minus"></i> Add Expense</a>
+            <a href="#" class="footer-link" onclick="showBudgetForm()"><i class="fa-solid fa-bullseye"></i> Set Budget</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2025 Personal Finance Manager. All rights reserved.</p>
+        <div class="footer-bottom-links">
+          <a href="#" onclick="showHelp('terms')">Terms</a>
+          <a href="#" onclick="showHelp('privacy')">Privacy</a>
+        </div>
+      </div>
+    </footer>
   </section>
 
-  <!-- Finance Section (normal users) -->
-  <section id="finance-section" style="display:none;">
-    <h2>Add Income</h2>
-    <input type="text" id="income-source" placeholder="Income Source" />
-    <input type="number" id="income-amount" placeholder="Amount" />
-    <button onclick="addIncome()">Add Income</button>
-
-    <h2>Add Expense</h2>
-    <input type="text" id="expense-description" placeholder="Expense Description" />
-    <input type="text" id="expense-category" placeholder="Category" />
-    <input type="number" id="expense-amount" placeholder="Amount" />
-    <button onclick="addExpense()">Add Expense</button>
-
-    <h2>Set Budget</h2>
-    <input type="text" id="budget-category" placeholder="Budget Category" />
-    <input type="number" id="budget-amount" placeholder="Budget Amount" />
-    <button onclick="setBudget()">Set Budget</button>
-
-    <h2>Summary</h2>
-    <div id="summary"></div>
-
-    <h3>Visualizations</h3>
-    <canvas id="categoryChart" width="400" height="200"></canvas>
-    <canvas id="incomeExpenseChart" width="400" height="200"></canvas>
+  <section id="admin-section" class="admin-section" style="display:none;">
+    <header class="app-header">
+      <h1 class="logo">
+        <i class="fa-solid fa-user-shield"></i> Admin Panel
+      </h1>
+      <div class="header-actions">
+        <button id="logout-btn-admin" class="icon-btn" title="Logout">
+          <i class="fa-solid fa-right-from-bracket"></i>
+        </button>
+      </div>
+    </header>
+    <div class="admin-card card">
+      <button id="export-all-csv" class="export-btn">Export ALL Users (CSV)</button>
+      <input type="text" id="admin-search" placeholder="Search user ID..." />
+      <div id="admin-summary"></div>
+    </div>
   </section>
 
-  <!-- Admin (Master) Section -->
-  <section id="admin-section" style="display:none;">
-    <h2>Admin Panel - All Users Data</h2>
-    <div id="admin-summary"></div>
-  </section>
-
-  <div id="message"></div>
-
-  <script src="script.js"></script>
+  <div id="message" class="message-box"></div>
+  
+  <script type="module" src="script.js"></script>
 </body>
 </html>
+
