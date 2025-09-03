@@ -83,11 +83,28 @@ let incomeCache = [], expenseCache = [], budgetCache = {};
 let usernameCheckTimeout;
 
 function showSection(sectionId) {
-  document.querySelectorAll('section').forEach(sec => sec.style.display = 'none');
-  const target = document.getElementById(sectionId);
-  if (target) {
+    const target = document.getElementById(sectionId);
+    if (!target) return;
+
+    const current = document.querySelector('section:not([style*="display: none"])');
+
+    if (current === target) return;
+
+    if (current) {
+        current.classList.add('section-exit');
+        current.addEventListener('animationend', function handler() {
+            current.style.display = 'none';
+            current.classList.remove('section-exit');
+            this.removeEventListener('animationend', handler);
+        });
+    }
+
     target.style.display = (sectionId.includes('dashboard') || sectionId.includes('admin')) ? 'flex' : 'block';
-  }
+    target.classList.add('section-enter');
+    target.addEventListener('animationend', function handler() {
+        target.classList.remove('section-enter');
+        this.removeEventListener('animationend', handler);
+    });
 }
 
 function showMessage(message, isError = false) {
@@ -103,7 +120,6 @@ async function register() {
     const password = DOM.regPassword().value;
     const confirmPassword = DOM.regConfirmPassword().value;
 
-    // Final checks before submission
     if (password !== confirmPassword) {
         return showMessage("Passwords do not match.", true);
     }
@@ -121,16 +137,14 @@ async function register() {
             return showMessage("Username is already taken.", true);
         }
 
-        // Use a dummy email for Firebase Auth, as it requires one
         const dummyEmail = `${usernameLower}@pfm.local`;
         const userCredential = await createUserWithEmailAndPassword(auth, dummyEmail, password);
         const user = userCredential.user;
 
-        // Use a transaction to ensure both documents are created or neither are
         await runTransaction(db, async (transaction) => {
             const userDocRef = doc(db, "users", user.uid);
-            transaction.set(usernameRef, { uid: user.uid }); // For username lookup
-            transaction.set(userDocRef, { username: username }); // For user profile data
+            transaction.set(usernameRef, { uid: user.uid });
+            transaction.set(userDocRef, { username: username });
         });
 
         showMessage("Registration successful! Please log in.");
@@ -154,7 +168,7 @@ async function login() {
         await signInWithEmailAndPassword(auth, dummyEmail, password);
     } catch (error) {
         console.error("Login Error:", error);
-        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
             showMessage("Invalid username or password.", true);
         } else {
             showMessage(error.message, true);
@@ -174,9 +188,10 @@ function validateRegistrationForm() {
     const password = DOM.regPassword().value;
     const confirmPassword = DOM.regConfirmPassword().value;
 
-    let isUsernameValid = false;
-    // Username validation
-    if (username.length >= 3) {
+    let isUsernameAvailable = false;
+    let isUsernameLengthValid = username.length >= 3;
+    
+    if (isUsernameLengthValid) {
         DOM.usernameStatus().textContent = 'Checking...';
         DOM.usernameStatus().className = 'input-hint';
         clearTimeout(usernameCheckTimeout);
@@ -186,40 +201,54 @@ function validateRegistrationForm() {
             if (docSnap.exists()) {
                 DOM.usernameStatus().textContent = 'Username is already taken.';
                 DOM.usernameStatus().className = 'input-hint error';
-                isUsernameValid = false;
+                isUsernameAvailable = false;
             } else {
                 DOM.usernameStatus().textContent = 'Username is available!';
                 DOM.usernameStatus().className = 'input-hint success';
-                isUsernameValid = true;
+                isUsernameAvailable = true;
             }
             checkAllFields();
         }, 500);
     } else {
         DOM.usernameStatus().textContent = 'Username must be at least 3 characters.';
         DOM.usernameStatus().className = 'input-hint error';
-        isUsernameValid = false;
+        isUsernameAvailable = false;
     }
 
-    // Password validation
     const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*.,?]).{8,}$/;
     const isPasswordValid = passwordRegex.test(password);
-    DOM.passwordRequirements().className = isPasswordValid ? 'input-hint success' : 'input-hint error';
+    DOM.passwordRequirements().className = isPasswordValid ? 'input-hint success' : 'input-hint';
+    if (!isPasswordValid && password.length > 0) {
+        DOM.passwordRequirements().className = 'input-hint error';
+    }
 
-    // Confirm password validation
+
     const doPasswordsMatch = password === confirmPassword && confirmPassword.length > 0;
-    DOM.confirmPasswordStatus().textContent = doPasswordsMatch ? 'Passwords match.' : 'Passwords do not match.';
-    DOM.confirmPasswordStatus().className = doPasswordsMatch ? 'input-hint success' : 'input-hint error';
-    if(confirmPassword.length === 0) DOM.confirmPasswordStatus().textContent = '';
+    if (confirmPassword.length > 0) {
+        DOM.confirmPasswordStatus().textContent = doPasswordsMatch ? 'Passwords match.' : 'Passwords do not match.';
+        DOM.confirmPasswordStatus().className = doPasswordsMatch ? 'input-hint success' : 'input-hint error';
+    } else {
+         DOM.confirmPasswordStatus().textContent = '';
+    }
 
     function checkAllFields() {
-       DOM.registerBtn().disabled = !(isUsernameValid && isPasswordValid && doPasswordsMatch);
+       DOM.registerBtn().disabled = !(isUsernameAvailable && isPasswordValid && doPasswordsMatch);
     }
-    checkAllFields();
+    // We call this here for immediate feedback on password fields, 
+    // and rely on the async check to handle the username part.
+    checkAllFields(); 
 }
 
 
-// ======= FINANCE & DATA FUNCTIONS (No changes from previous version) =======
-// ... (All functions from addOrUpdateEntry to the end of updateCharts are identical)
+// ======= FINANCE & DATA FUNCTIONS =======
+function resetFinanceInputs() {
+  document.querySelectorAll('.form-card input').forEach(input => input.value = '');
+  DOM.addIncomeBtn().textContent = 'Add Income';
+  DOM.addExpenseBtn().textContent = 'Add Expense';
+  editingIncomeId = null;
+  editingExpenseId = null;
+}
+
 async function addOrUpdateEntry(type, data, id) {
     const userId = auth.currentUser?.uid;
     if (!userId) return showMessage('Not logged in.', true);
@@ -291,7 +320,11 @@ function attachRealtimeListeners(userId) {
     if (expenseUnsubscribe) expenseUnsubscribe();
     if (budgetUnsubscribe) budgetUnsubscribe();
 
-    if (!userId) return;
+    if (!userId) {
+        incomeCache = [], expenseCache = [], budgetCache = {};
+        renderFromCaches();
+        return;
+    }
 
     const render = () => renderFromCaches();
 
@@ -322,8 +355,8 @@ function renderFromCaches() {
         return base + buttons;
     };
     
-    DOM.incomeList().innerHTML = incomeCache.map(item => createListItemHTML(item, 'income')).join('');
-    DOM.expenseList().innerHTML = expenseCache.map(item => createListItemHTML(item, 'expense')).join('');
+    DOM.incomeList().innerHTML = incomeCache.map(item => createListItemHTML(item, 'income')).join('') || "<li>No income recorded.</li>";
+    DOM.expenseList().innerHTML = expenseCache.map(item => createListItemHTML(item, 'expense')).join('') || "<li>No expenses recorded.</li>";
     
     updateSummary(totalIncome, totalExpense, budgetCache, categoryTotals);
     updateCharts(categoryTotals, incomeMonthly, expenseMonthly);
@@ -360,32 +393,40 @@ document.addEventListener("DOMContentLoaded", () => {
   showSection('login-section');
   document.body.classList.add('auth-active');
 
-  // Auth form toggling
   document.getElementById('show-register').addEventListener('click', (e) => { e.preventDefault(); showSection('register-section'); });
   document.getElementById('show-login').addEventListener('click', (e) => { e.preventDefault(); showSection('login-section'); });
 
-  // Auth actions
   document.getElementById('login-btn').addEventListener('click', login);
   document.getElementById('register-btn').addEventListener('click', register);
   document.getElementById('logout-btn').addEventListener('click', logout);
   document.getElementById('logout-btn-admin')?.addEventListener('click', logout);
 
-  // Registration form validation listeners
   DOM.regUsername().addEventListener('input', validateRegistrationForm);
   DOM.regPassword().addEventListener('input', validateRegistrationForm);
   DOM.regConfirmPassword().addEventListener('input', validateRegistrationForm);
 
-  // Finance form actions
-  DOM.addIncomeBtn().addEventListener('click', () => { /* ... unchanged ... */ });
-  DOM.addExpenseBtn().addEventListener('click', () => { /* ... unchanged ... */ });
-  document.getElementById('set-budget-btn').addEventListener('click', setBudget);
+  const addIncomeBtn = document.getElementById('add-income-btn');
+  if(addIncomeBtn) addIncomeBtn.addEventListener('click', () => {
+    const data = { source: DOM.incomeSource().value.trim(), amount: parseFloat(DOM.incomeAmount().value) };
+    if (!data.source || isNaN(data.amount) || data.amount <= 0) return showMessage('Invalid income data.', true);
+    addOrUpdateEntry('income', data, editingIncomeId);
+  });
+
+  const addExpenseBtn = document.getElementById('add-expense-btn');
+  if(addExpenseBtn) addExpenseBtn.addEventListener('click', () => {
+    const data = { description: DOM.expenseDescription().value.trim(), category: DOM.expenseCategory().value.trim() || 'Other', amount: parseFloat(DOM.expenseAmount().value) };
+    if (!data.description || isNaN(data.amount) || data.amount <= 0) return showMessage('Invalid expense data.', true);
+    addOrUpdateEntry('expense', data, editingExpenseId);
+  });
   
-  // List item actions (edit/delete)
+  document.getElementById('set-budget-btn')?.addEventListener('click', setBudget);
+  
   const listActionHandler = (e, type, cache) => {
     const button = e.target.closest('button');
     if (!button) return;
     const id = button.dataset.id;
     const item = cache.find(i => i.id === id);
+    if (!item) return;
     if (button.classList.contains('edit-btn')) {
         if (type === 'income') startEditIncome(id, item.amount, item.source);
         else startEditExpense(id, item.amount, item.description, item.category);
