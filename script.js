@@ -10,15 +10,15 @@ const ADMIN_UID = "REPLACE_WITH_YOUR_ADMIN_FIREBASE_UID";
 
 // Fallback for local development if environment variables aren't set
 if (!window.env) {
-  console.warn("`window.env` is not set. Using placeholder keys. This will fail unless you replace them for local testing.");
+  console.warn("`window.env` is not set. Using provided keys for local testing.");
   window.env = {
-    FIREBASE_API_KEY: "YOUR_LOCAL_API_KEY",
-    FIREBASE_AUTH_DOMAIN: "YOUR_LOCAL_AUTH_DOMAIN",
-    FIREBASE_PROJECT_ID: "YOUR_LOCAL_PROJECT_ID",
-    FIREBASE_STORAGE_BUCKET: "YOUR_LOCAL_STORAGE_BUCKET",
-    FIREBASE_MESSAGING_SENDER_ID: "YOUR_LOCAL_MESSAGING_SENDER_ID",
-    FIREBASE_APP_ID: "YOUR_LOCAL_APP_ID",
-    FIREBASE_MEASUREMENT_ID: "YOUR_LOCAL_MEASUREMENT_ID"
+    FIREBASE_API_KEY: "AIzaSyB8BfbOECPgrWIrJPw7d2dVKRNda6evID0",
+    FIREBASE_AUTH_DOMAIN: "personal-finance-manager-a59ea.firebaseapp.com",
+    FIREBASE_PROJECT_ID: "personal-finance-manager-a59ea",
+    FIREBASE_STORAGE_BUCKET: "personal-finance-manager-a59ea.appspot.com",
+    FIREBASE_MESSAGING_SENDER_ID: "162807840707",
+    FIREBASE_APP_ID: "1:162807840707:web:2be1d036daf26683db0776",
+    FIREBASE_MEASUREMENT_ID: "G-VYPHC8YMJM"
   };
 }
 
@@ -361,6 +361,7 @@ async function loadAllUsersData() {
 
 // ======= EVENT LISTENERS & INITIALIZATION =======
 document.addEventListener("DOMContentLoaded", () => {
+  if (!auth) return; // Stop if Firebase failed to initialize
   showSection('auth-section');
   document.body.classList.add('auth-active');
   
