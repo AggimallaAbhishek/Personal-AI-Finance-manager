@@ -96,15 +96,22 @@ function showSection(sectionId) {
             current.style.display = 'none';
             current.classList.remove('section-exit');
             this.removeEventListener('animationend', handler);
-        });
+        }, { once: true });
     }
 
-    target.style.display = (sectionId.includes('dashboard') || sectionId.includes('admin')) ? 'flex' : 'block';
+    const displayType = (sectionId.includes('dashboard') || sectionId.includes('admin')) ? 'flex' : 'block';
+    
+    // Set display to block for auth containers to respect flex centering
+    if (sectionId.includes('login') || sectionId.includes('register')) {
+        target.parentElement.style.display = 'flex';
+    }
+
+    target.style.display = displayType;
     target.classList.add('section-enter');
     target.addEventListener('animationend', function handler() {
         target.classList.remove('section-enter');
         this.removeEventListener('animationend', handler);
-    });
+    }, { once: true });
 }
 
 function showMessage(message, isError = false) {
@@ -390,7 +397,7 @@ async function loadAllUsersData() { /* ... unchanged ... */ }
 // ======= EVENT LISTENERS & INITIALIZATION =======
 document.addEventListener("DOMContentLoaded", () => {
   if (!auth) return;
-  showSection('login-section');
+  DOM.loginSection().style.display = 'block'; // Start on login page
   document.body.classList.add('auth-active');
 
   document.getElementById('show-register').addEventListener('click', (e) => { e.preventDefault(); showSection('register-section'); });
