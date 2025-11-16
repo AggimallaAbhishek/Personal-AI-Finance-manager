@@ -8,207 +8,943 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   
-  <link rel="stylesheet" href="style.css" />
-  
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* ======= CSS VARIABLES ======= */
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      --card-bg-gradient: linear-gradient(135deg, #1a2a33, #253942);
+      --primary-color: #6a11cb;
+      --secondary-color: #2575fc;
+      --text-color: #e0e0e0;
+      --input-bg: rgba(255, 255, 255, 0.1);
+      --input-border: rgba(255, 255, 255, 0.2);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      --hover-bg: rgba(255, 255, 255, 0.05);
+      --error-color: #ff6b6b;
+      --success-color: #48bb78;
+      --warning-color: #ffcc00;
+    }
+
+    /* ======= LIGHT THEME OVERRIDES ======= */
+    body.light {
+      --bg-gradient: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+      --card-bg-gradient: linear-gradient(135deg, #fff, #f0f2f5);
+      --primary-color: #4a5568;
+      --secondary-color: #6b46c1;
+      --text-color: #2d3748;
+      --input-bg: #fff;
+      --input-border: #e2e8f0;
+      --card-border: #e2e8f0;
+      --shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      --hover-bg: #f7fafc;
+    }
+
+    /* ======= BASE STYLES ======= */
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-image: var(--bg-gradient);
+      color: var(--text-color);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: background-image 0.3s, color 0.3s;
+      overflow-x: hidden;
+    }
+
+    /* ======= ANIMATIONS ======= */
+    @keyframes section-fade-in {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .section-enter { animation: section-fade-in 0.4s ease-out forwards; }
+
+    /* ======= AUTHENTICATION STYLES ======= */
+    .auth-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      width: 100%;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .auth-card {
+      background-image: var(--card-bg-gradient);
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      width: 400px;
+      max-width: 90%;
+      text-align: center;
+      border: 1px solid var(--card-border);
+    }
+
+    .auth-card .logo { font-size: 1.5rem; margin-bottom: 2rem; }
+    .auth-form h2 { margin-bottom: 1.5rem; font-weight: 500; }
+
+    .auth-form input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 5px;
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      background: var(--input-bg);
+      color: var(--text-color);
+      font-size: 1rem;
+      transition: all 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    .auth-form input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(106, 17, 203, 0.3);
+    }
+
+    .input-hint {
+      display: block;
+      height: 18px;
+      font-size: 0.75rem;
+      text-align: left;
+      padding-left: 5px;
+      margin-bottom: 10px;
+      color: var(--text-color);
+      opacity: 0.7;
+    }
+    .input-hint.error { color: var(--error-color); opacity: 1; }
+    .input-hint.success { color: var(--success-color); opacity: 1; }
+
+    .auth-form button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background-image: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+      color: white;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      margin-top: 1rem;
+    }
+    .auth-form button:disabled { background: #555; cursor: not-allowed; opacity: 0.6; }
+    .auth-form button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); }
+
+    .toggle-link { font-size: 0.9rem; margin-top: 20px; }
+    .toggle-link a { color: var(--secondary-color); text-decoration: none; font-weight: 600; }
+
+    /* ======= DASHBOARD STYLES ======= */
+    .dashboard-section {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      width: 100%;
+    }
+
+    .app-header {
+      background: var(--card-bg-gradient);
+      border-bottom: 1px solid var(--card-border);
+      padding: 0 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(15px);
+      height: 70px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .header-left, .header-right { display: flex; align-items: center; gap: 20px; }
+    
+    .logo-container { display: flex; align-items: center; gap: 12px; }
+    .logo-icon { font-size: 1.8rem; color: var(--primary-color); }
+    .logo-text { font-size: 1.2rem; font-weight: 600; margin: 0; }
+
+    /* Navigation */
+    .main-nav { display: flex; gap: 5px; }
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      color: var(--text-color);
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      opacity: 0.7;
+    }
+    .nav-link:hover, .nav-link.active { background: var(--hover-bg); opacity: 1; color: var(--secondary-color); }
+
+    /* User Info */
+    .user-info { display: flex; align-items: center; gap: 12px; }
+    .user-avatar {
+      width: 35px; height: 35px;
+      background: var(--primary-color);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: white;
+    }
+    .user-details { display: flex; flex-direction: column; }
+    .user-name { font-weight: 500; font-size: 0.9rem; }
+    .user-status { font-size: 0.7rem; color: var(--success-color); }
+
+    .action-btn {
+      background: none; border: none;
+      color: var(--text-color);
+      font-size: 1.1rem; padding: 8px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .action-btn:hover { background: var(--hover-bg); color: var(--primary-color); }
+
+    /* Main Content Area */
+    .dashboard-container {
+      padding: 30px;
+      flex: 1;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      box-sizing: border-box;
+    }
+
+    /* View Containers (Tabs) */
+    .view-container { display: none; animation: section-fade-in 0.3s ease-out; }
+    .view-container.active { display: grid; gap: 30px; }
+    
+    /* Grid Layouts for specific views */
+    #view-overview.active { grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); }
+    #view-transactions.active { grid-template-columns: 1fr 1fr; }
+    #view-budgets.active { grid-template-columns: 1fr; max-width: 800px; margin: 0 auto; }
+
+    /* Cards */
+    .card {
+      background-image: var(--card-bg-gradient);
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--card-border);
+    }
+
+    .card-badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 20px;
+      margin-bottom: 15px;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      color: #fff;
+    }
+
+    /* Forms */
+    .form-group { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid var(--card-border); }
+    .form-group:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    
+    .field-label { display: block; margin-bottom: 6px; font-size: 0.85rem; opacity: 0.8; }
+    
+    .form-card input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      background: var(--input-bg);
+      color: var(--text-color);
+      font-size: 1rem;
+      margin-bottom: 15px;
+      box-sizing: border-box;
+    }
+
+    .form-btn {
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      color: white;
+      border: none; padding: 10px 20px;
+      border-radius: 8px; font-weight: 600;
+      cursor: pointer; width: 100%;
+      transition: transform 0.2s;
+    }
+    .form-btn:hover { transform: translateY(-2px); }
+
+    /* Lists */
+    .entry-list { list-style: none; padding: 0; margin-top: 15px; }
+    .entry-list li {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .entry-list li:last-child { border-bottom: none; }
+
+    .entry-buttons button {
+      background: none; border: none;
+      cursor: pointer; margin-left: 10px;
+      transition: transform 0.2s;
+    }
+    .entry-buttons button:hover { transform: scale(1.2); }
+    .edit-btn { color: var(--secondary-color); }
+    .delete-btn { color: var(--error-color); }
+
+    /* Budget Bars */
+    .budget-bar-container {
+      width: 100%; height: 8px;
+      background-color: var(--input-bg);
+      border-radius: 4px;
+      overflow: hidden; margin-top: 5px;
+    }
+    .budget-bar-fill { height: 100%; transition: width 0.5s ease; }
+    .budget-bar-green { background-color: var(--success-color); }
+    .budget-bar-yellow { background-color: var(--warning-color); }
+    .budget-bar-red { background-color: var(--error-color); }
+
+    /* Message Box */
+    .message-box {
+      position: fixed; bottom: 20px; right: 20px;
+      color: white; padding: 15px 25px;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      z-index: 10000;
+      transform: translateX(100px); opacity: 0;
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+    .message-box.show { transform: translateX(0); opacity: 1; }
+    .message-box.error { background-color: var(--error-color); }
+    .message-box.success { background-color: var(--success-color); }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      #view-transactions.active { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 768px) {
+      .nav-link span, .logo-text, .user-details { display: none; }
+      .dashboard-container { padding: 15px; }
+    }
+  </style>
 </head>
 <body>
-  <!-- ======= LOGIN SECTION ======= -->
+
   <section id="login-section" class="auth-container">
     <div class="auth-card">
-      <h1 class="logo">
-        <i class="fa-solid fa-wallet"></i> Personal Finance Manager
-      </h1>
-      <div id="login-form" class="auth-form">
+      <h1 class="logo"><i class="fa-solid fa-wallet"></i> Finance Manager</h1>
+      <div class="auth-form">
         <h2>Login</h2>
         <input type="text" id="login-username" placeholder="Username" required />
         <input type="password" id="login-password" placeholder="Password" required />
-        <button id="login-btn">
-          <i class="fa-solid fa-right-to-bracket"></i> Login
-        </button>
-        <p class="toggle-link">
-          Don't have an account? <a href="#" id="show-register">Register here.</a>
-        </p>
+        <button id="login-btn"><i class="fa-solid fa-right-to-bracket"></i> Login</button>
+        <p class="toggle-link">Don't have an account? <a href="#" id="show-register">Register here.</a></p>
       </div>
     </div>
   </section>
 
-  <!-- ======= REGISTRATION SECTION ======= -->
   <section id="register-section" class="auth-container" style="display:none;">
     <div class="auth-card">
-      <h1 class="logo">
-        <i class="fa-solid fa-wallet"></i> Personal Finance Manager
-      </h1>
-      <div id="register-form" class="auth-form">
+      <h1 class="logo"><i class="fa-solid fa-wallet"></i> Finance Manager</h1>
+      <div class="auth-form">
         <h2>Create Account</h2>
         <input type="text" id="reg-username" placeholder="Username" required />
         <small id="username-status" class="input-hint"></small>
         
         <input type="password" id="reg-password" placeholder="Password" required />
-        <small id="password-requirements" class="input-hint">8+ characters, 1 uppercase, 1 special character.</small>
+        <small id="password-requirements" class="input-hint">8+ chars, 1 uppercase, 1 special char.</small>
         
         <input type="password" id="reg-confirm-password" placeholder="Confirm Password" required />
         <small id="confirm-password-status" class="input-hint"></small>
 
-        <button id="register-btn" disabled>
-          <i class="fa-solid fa-user-plus"></i> Register
-        </button>
-        <p class="toggle-link">
-          Already have an account? <a href="#" id="show-login">Login here.</a>
-        </p>
+        <button id="register-btn" disabled><i class="fa-solid fa-user-plus"></i> Register</button>
+        <p class="toggle-link">Already have an account? <a href="#" id="show-login">Login here.</a></p>
       </div>
     </div>
   </section>
 
-  <!-- ======= DASHBOARD SECTION ======= -->
   <section id="dashboard" class="dashboard-section" style="display:none;">
     <header class="app-header">
       <div class="header-left">
         <div class="logo-container">
           <i class="fa-solid fa-wallet logo-icon"></i>
-          <h1 class="logo-text">Personal Finance Manager</h1>
+          <h1 class="logo-text">Finance Manager</h1>
         </div>
         <nav class="main-nav">
-          <a href="#" class="nav-link active" data-section="overview">
-            <i class="fa-solid fa-chart-pie"></i>
-            <span>Overview</span>
+          <a href="#" class="nav-link active" data-target="view-overview">
+            <i class="fa-solid fa-chart-pie"></i> <span>Overview</span>
           </a>
-          <a href="#" class="nav-link" data-section="transactions">
-            <i class="fa-solid fa-exchange-alt"></i>
-            <span>Transactions</span>
+          <a href="#" class="nav-link" data-target="view-transactions">
+            <i class="fa-solid fa-exchange-alt"></i> <span>Transactions</span>
           </a>
-          <a href="#" class="nav-link" data-section="budgets">
-            <i class="fa-solid fa-bullseye"></i>
-            <span>Budgets</span>
-          </a>
-          <a href="#" class="nav-link" data-section="reports">
-            <i class="fa-solid fa-chart-bar"></i>
-            <span>Reports</span>
+          <a href="#" class="nav-link" data-target="view-budgets">
+            <i class="fa-solid fa-bullseye"></i> <span>Budgets</span>
           </a>
         </nav>
       </div>
       
       <div class="header-right">
         <div class="user-info">
-          <div class="user-avatar">
-            <i class="fa-solid fa-user"></i>
-          </div>
+          <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
           <div class="user-details">
-            <span class="user-name" id="user-display-name"></span>
+            <span class="user-name" id="user-display-name">User</span>
             <span class="user-status">Online</span>
           </div>
         </div>
-        
         <div class="header-actions">
-          <button class="action-btn" id="notifications-btn" title="Notifications">
-            <i class="fa-solid fa-bell"></i>
-            <span class="notification-badge">3</span>
-          </button>
           <button class="action-btn" id="theme-toggle" title="Toggle Theme">
             <i class="fa-solid fa-moon"></i>
           </button>
-          <div class="user-menu">
-            <button class="action-btn user-menu-toggle" title="User Menu">
-              <i class="fa-solid fa-chevron-down"></i>
-            </button>
-            <div class="user-dropdown">
-              <a href="#" class="dropdown-item" id="logout-btn">
-                <i class="fa-solid fa-right-from-bracket"></i>
-                <span>Logout</span>
-              </a>
-            </div>
-          </div>
+          <button class="action-btn" id="logout-btn" title="Logout">
+            <i class="fa-solid fa-right-from-bracket"></i>
+          </button>
         </div>
       </div>
     </header>
 
     <main class="dashboard-container">
-      <div class="card summary-card">
-        <span class="card-badge">Overview</span>
-        <h2>Financial Overview</h2>
-        <div id="summary"></div>
-        <div class="chart-container">
-          <canvas id="incomeExpenseChart"></canvas>
-        </div>
-        <div class="chart-container">
-          <canvas id="categoryChart"></canvas>
-        </div>
-      </div>
-
-      <div class="card form-card">
-        <span class="card-badge">Forms</span>
-        <div class="form-group">
-          <h2>
-            <i class="fa-solid fa-circle-plus"></i> Add Income
-          </h2>
-          <label for="income-source" class="field-label">Source</label>
-          <input type="text" id="income-source" placeholder="Income Source" required />
-          <label for="income-amount" class="field-label">Amount</label>
-          <input type="number" id="income-amount" placeholder="Amount" min="0" step="0.01" required />
-          <button id="add-income-btn" class="form-btn">Add Income</button>
-        </div>
-        
-        <div class="form-group">
-          <h2>
-            <i class="fa-solid fa-minus-circle"></i> Add Expense
-          </h2>
-          <label for="expense-description" class="field-label">Description</label>
-          <input type="text" id="expense-description" placeholder="Expense Description" required />
-          <label for="expense-category" class="field-label">Category</label>
-          <input type="text" id="expense-category" placeholder="Category" required />
-          <label for="expense-amount" class="field-label">Amount</label>
-          <input type="number" id="expense-amount" placeholder="Amount" min="0" step="0.01" required />
-          <button id="add-expense-btn" class="form-btn">Add Expense</button>
-        </div>
-
-        <div class="form-group">
-          <h2>
-            <i class="fa-solid fa-bullseye"></i> Set Budget
-          </h2>
-          <label for="budget-category" class="field-label">Budget Category</label>
-          <input type="text" id="budget-category" placeholder="Budget Category" required />
-          <label for="budget-amount" class="field-label">Budget Amount</label>
-          <input type="number" id="budget-amount" placeholder="Budget Amount" min="0" step="0.01" required />
-          <button id="set-budget-btn" class="form-btn">Set Budget</button>
-        </div>
-      </div>
       
-      <div class="card entries-card">
-        <span class="card-badge">Entries</span>
-        <h3>Income Entries</h3>
-        <ul id="income-list" class="entry-list"></ul>
-        
-        <h3>Expense Entries</h3>
-        <ul id="expense-list" class="entry-list"></ul>
-      </div>
-    </main>
-  </section>
-
-  <!-- ======= ADMIN SECTION ======= -->
-  <section id="admin-section" class="admin-section" style="display:none;">
-      <header class="app-header">
-          <h1 class="logo">
-              <i class="fa-solid fa-user-shield"></i> Admin Panel
-          </h1>
-          <div class="header-right">
-              <div class="user-info">
-                  <div class="user-avatar"><i class="fas fa-user-shield"></i></div>
-                  <div class="user-details"><span class="user-name" id="admin-user-name">Admin</span></div>
-              </div>
-              <button id="logout-btn-admin" class="action-btn" title="Logout">
-                  <i class="fa-solid fa-right-from-bracket"></i>
-              </button>
+      <div id="view-overview" class="view-container active">
+        <div class="card summary-card">
+          <span class="card-badge">Financial Health</span>
+          <div id="summary">Loading summary...</div>
+        </div>
+        <div class="card">
+          <h3>Spending by Category</h3>
+          <div class="chart-container">
+            <canvas id="categoryChart"></canvas>
           </div>
-      </header>
-      <div class="admin-card card">
-          <input type="text" id="admin-search" placeholder="Search user ID or email..." />
-          <div id="admin-summary"></div>
+        </div>
+        <div class="card">
+          <h3>Income vs Expense Trend</h3>
+          <div class="chart-container">
+            <canvas id="incomeExpenseChart"></canvas>
+          </div>
+        </div>
       </div>
+
+      <div id="view-transactions" class="view-container">
+        <div class="card form-card">
+          <span class="card-badge">New Entry</span>
+          
+          <div class="form-group">
+            <h3><i class="fa-solid fa-circle-plus" style="color:var(--success-color);"></i> Add Income</h3>
+            <label class="field-label">Source</label>
+            <input type="text" id="income-source" placeholder="e.g. Salary, Freelance" />
+            <label class="field-label">Amount</label>
+            <input type="number" id="income-amount" placeholder="0.00" min="0" step="0.01" />
+            <button id="add-income-btn" class="form-btn">Add Income</button>
+          </div>
+          
+          <div class="form-group">
+            <h3><i class="fa-solid fa-minus-circle" style="color:var(--error-color);"></i> Add Expense</h3>
+            <label class="field-label">Description</label>
+            <input type="text" id="expense-description" placeholder="e.g. Groceries" />
+            <label class="field-label">Category</label>
+            <input type="text" id="expense-category" placeholder="e.g. Food, Rent, Transport" />
+            <label class="field-label">Amount</label>
+            <input type="number" id="expense-amount" placeholder="0.00" min="0" step="0.01" />
+            <button id="add-expense-btn" class="form-btn">Add Expense</button>
+          </div>
+        </div>
+
+        <div class="card entries-card">
+          <span class="card-badge">Recent History</span>
+          <h3>Income</h3>
+          <ul id="income-list" class="entry-list"></ul>
+          <h3 style="margin-top: 20px;">Expenses</h3>
+          <ul id="expense-list" class="entry-list"></ul>
+        </div>
+      </div>
+
+      <div id="view-budgets" class="view-container">
+        <div class="card form-card">
+          <span class="card-badge">Budget Management</span>
+          <div class="form-group">
+            <h3>Set Monthly Limit</h3>
+            <label class="field-label">Category Name</label>
+            <input type="text" id="budget-category" placeholder="e.g. Food" />
+            <label class="field-label">Limit Amount</label>
+            <input type="number" id="budget-amount" placeholder="0.00" min="0" step="0.01" />
+            <button id="set-budget-btn" class="form-btn">Save Budget</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Budget Status</h3>
+          <div id="budget-list-container">
+            </div>
+        </div>
+      </div>
+
+    </main>
   </section>
 
   <div id="message" class="message-box"></div>
 
-  <script type="module" src="script.js"></script>
+  <script type="module">
+    // ======= FIREBASE CONFIGURATION =======
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+    import { getFirestore, enableIndexedDbPersistence, doc, getDoc, setDoc, updateDoc, addDoc, collection, serverTimestamp, onSnapshot, orderBy, query, deleteDoc, runTransaction } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+    // REPLACE THESE WITH YOUR ACTUAL FIREBASE KEYS
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY_HERE",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.firebasestorage.app",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    let app, auth, db;
+    try {
+      app = initializeApp(firebaseConfig);
+      auth = getAuth(app);
+      db = getFirestore(app);
+      // Persistence attempt (optional)
+      enableIndexedDbPersistence(db).catch(err => console.log("Persistence error:", err.code));
+    } catch (error) {
+      console.error("Firebase init error:", error);
+      alert("Error connecting to Firebase. Check your configuration keys in the script tag.");
+    }
+
+    // ======= DOM ELEMENTS =======
+    const DOM = {
+      loginSection: document.getElementById('login-section'),
+      registerSection: document.getElementById('register-section'),
+      dashboardSection: document.getElementById('dashboard'),
+      userDisplayName: document.getElementById('user-display-name'),
+      messageDiv: document.getElementById('message'),
+      summaryDiv: document.getElementById('summary'),
+      budgetListContainer: document.getElementById('budget-list-container'),
+      incomeList: document.getElementById('income-list'),
+      expenseList: document.getElementById('expense-list'),
+      // Inputs
+      incomeSource: document.getElementById('income-source'),
+      incomeAmount: document.getElementById('income-amount'),
+      expenseDescription: document.getElementById('expense-description'),
+      expenseCategory: document.getElementById('expense-category'),
+      expenseAmount: document.getElementById('expense-amount'),
+      budgetCategory: document.getElementById('budget-category'),
+      budgetAmount: document.getElementById('budget-amount'),
+      // Auth Inputs
+      loginUser: document.getElementById('login-username'),
+      loginPass: document.getElementById('login-password'),
+      regUser: document.getElementById('reg-username'),
+      regPass: document.getElementById('reg-password'),
+      regConfirm: document.getElementById('reg-confirm-password'),
+      // Auth Status
+      userStatus: document.getElementById('username-status'),
+      passReq: document.getElementById('password-requirements'),
+      confirmStatus: document.getElementById('confirm-password-status'),
+      regBtn: document.getElementById('register-btn'),
+      // Charts
+      catChart: document.getElementById('categoryChart'),
+      trendChart: document.getElementById('incomeExpenseChart'),
+      // Theme
+      themeToggle: document.getElementById('theme-toggle'),
+      navLinks: document.querySelectorAll('.nav-link'),
+      views: document.querySelectorAll('.view-container')
+    };
+
+    // ======= STATE & VARIABLES =======
+    let categoryChartInstance, trendChartInstance;
+    let editingIncomeId = null, editingExpenseId = null;
+    let unsubIncome, unsubExpense, unsubBudget;
+    let incomeData = [], expenseData = [], budgetData = {};
+    let usernameTimer;
+
+    // ======= UTILITY FUNCTIONS =======
+    function showSection(sectionId) {
+      // Hide all main sections
+      [DOM.loginSection, DOM.registerSection, DOM.dashboardSection].forEach(sec => {
+        if(sec) sec.style.display = 'none';
+      });
+      
+      const target = document.getElementById(sectionId);
+      if(target) {
+        target.style.display = sectionId === 'dashboard' ? 'flex' : 'flex';
+        target.classList.add('section-enter');
+        setTimeout(() => target.classList.remove('section-enter'), 400);
+      }
+    }
+
+    function showMessage(msg, isError = false) {
+      DOM.messageDiv.textContent = msg;
+      DOM.messageDiv.className = isError ? 'message-box error show' : 'message-box success show';
+      setTimeout(() => DOM.messageDiv.classList.remove('show'), 4000);
+    }
+
+    function toggleTheme() {
+      document.body.classList.toggle('light');
+      const isLight = document.body.classList.contains('light');
+      DOM.themeToggle.innerHTML = isLight ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
+      localStorage.setItem('theme', isLight ? 'light' : 'dark');
+      updateCharts(); // Re-render charts for new colors
+    }
+
+    // ======= NAVIGATION TABS =======
+    function setupNavigation() {
+      DOM.navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          // Remove active class from links
+          DOM.navLinks.forEach(l => l.classList.remove('active'));
+          link.classList.add('active');
+          
+          // Hide all views
+          DOM.views.forEach(view => view.classList.remove('active'));
+          
+          // Show target view
+          const targetId = link.getAttribute('data-target');
+          document.getElementById(targetId).classList.add('active');
+          
+          // If switching to Overview, refresh charts to ensure size is correct
+          if(targetId === 'view-overview') updateCharts();
+        });
+      });
+    }
+
+    // ======= AUTH LOGIC =======
+    async function login() {
+      const user = DOM.loginUser.value.trim();
+      const pass = DOM.loginPass.value;
+      if(!user || !pass) return showMessage("Enter username and password", true);
+      
+      try {
+        await signInWithEmailAndPassword(auth, `${user.toLowerCase()}@pfm.local`, pass);
+      } catch(e) {
+        showMessage("Login failed. Check credentials.", true);
+        console.error(e);
+      }
+    }
+
+    async function register() {
+      const user = DOM.regUser.value.trim();
+      const pass = DOM.regPass.value;
+      
+      try {
+        const email = `${user.toLowerCase()}@pfm.local`;
+        const cred = await createUserWithEmailAndPassword(auth, email, pass);
+        
+        // Store username mapping
+        await setDoc(doc(db, 'usernames', user.toLowerCase()), { uid: cred.user.uid });
+        await setDoc(doc(db, 'users', cred.user.uid), { username: user });
+        
+        showMessage("Registration successful!");
+        showSection('login-section');
+      } catch(e) {
+        showMessage(e.message, true);
+      }
+    }
+
+    // Form Validation
+    function validateRegForm() {
+      clearTimeout(usernameTimer);
+      const user = DOM.regUser.value.trim();
+      const pass = DOM.regPass.value;
+      const confirm = DOM.regConfirm.value;
+      
+      // Password Check
+      const passValid = /^(?=.*[A-Z])(?=.*[!@#$%^&*.,?]).{8,}$/.test(pass);
+      DOM.passReq.className = passValid ? 'input-hint success' : 'input-hint error';
+      
+      // Match Check
+      const match = pass === confirm && confirm.length > 0;
+      DOM.confirmStatus.textContent = match ? "Passwords match" : "Passwords do not match";
+      DOM.confirmStatus.className = match ? 'input-hint success' : 'input-hint error';
+
+      // Username Check (Debounced)
+      DOM.userStatus.textContent = "Checking...";
+      DOM.regBtn.disabled = true;
+      
+      usernameTimer = setTimeout(async () => {
+        if(user.length < 3) {
+           DOM.userStatus.textContent = "Too short";
+           return;
+        }
+        const snap = await getDoc(doc(db, 'usernames', user.toLowerCase()));
+        if(snap.exists()) {
+          DOM.userStatus.textContent = "Username taken";
+          DOM.userStatus.className = "input-hint error";
+        } else {
+          DOM.userStatus.textContent = "Username available";
+          DOM.userStatus.className = "input-hint success";
+          if(passValid && match) DOM.regBtn.disabled = false;
+        }
+      }, 500);
+    }
+
+    // ======= DATA LOGIC =======
+    function resetForms() {
+      DOM.incomeSource.value = ''; DOM.incomeAmount.value = '';
+      DOM.expenseDescription.value = ''; DOM.expenseCategory.value = ''; DOM.expenseAmount.value = '';
+      DOM.budgetCategory.value = ''; DOM.budgetAmount.value = '';
+      document.getElementById('add-income-btn').textContent = 'Add Income';
+      document.getElementById('add-expense-btn').textContent = 'Add Expense';
+      editingIncomeId = null; editingExpenseId = null;
+    }
+
+    async function handleTransaction(type) {
+      const uid = auth.currentUser?.uid;
+      if(!uid) return;
+
+      const isIncome = type === 'income';
+      const collectionName = isIncome ? 'income' : 'expenses';
+      const id = isIncome ? editingIncomeId : editingExpenseId;
+      
+      const data = isIncome ? {
+        source: DOM.incomeSource.value.trim(),
+        amount: parseFloat(DOM.incomeAmount.value)
+      } : {
+        description: DOM.expenseDescription.value.trim(),
+        category: DOM.expenseCategory.value.trim() || 'General',
+        amount: parseFloat(DOM.expenseAmount.value)
+      };
+
+      if(!data.amount || data.amount <= 0) return showMessage("Invalid amount", true);
+
+      try {
+        if(id) {
+          await updateDoc(doc(db, 'users', uid, collectionName, id), data);
+          showMessage("Entry updated");
+        } else {
+          data.date = serverTimestamp();
+          await addDoc(collection(db, 'users', uid, collectionName), data);
+          showMessage("Entry added");
+        }
+        resetForms();
+      } catch(e) {
+        showMessage("Error saving data", true);
+      }
+    }
+
+    async function setBudget() {
+      const uid = auth.currentUser?.uid;
+      const cat = DOM.budgetCategory.value.trim();
+      const amt = parseFloat(DOM.budgetAmount.value);
+      
+      if(!cat || !amt) return showMessage("Invalid budget data", true);
+      
+      try {
+        await setDoc(doc(db, 'users', uid, 'budgets', cat), { amount: amt });
+        showMessage("Budget set");
+        resetForms();
+      } catch(e) { console.error(e); }
+    }
+
+    async function deleteItem(type, id) {
+      if(!confirm("Delete this item?")) return;
+      const col = type === 'income' ? 'income' : 'expenses';
+      await deleteDoc(doc(db, 'users', auth.currentUser.uid, col, id));
+      showMessage("Deleted");
+    }
+
+    function editItem(type, id) {
+      const list = type === 'income' ? incomeData : expenseData;
+      const item = list.find(i => i.id === id);
+      if(!item) return;
+
+      if(type === 'income') {
+        DOM.incomeSource.value = item.source;
+        DOM.incomeAmount.value = item.amount;
+        document.getElementById('add-income-btn').textContent = 'Update';
+        editingIncomeId = id;
+        // Switch tab to form
+        document.querySelector('[data-target="view-transactions"]').click();
+        DOM.incomeSource.focus();
+      } else {
+        DOM.expenseDescription.value = item.description;
+        DOM.expenseCategory.value = item.category;
+        DOM.expenseAmount.value = item.amount;
+        document.getElementById('add-expense-btn').textContent = 'Update';
+        editingExpenseId = id;
+        document.querySelector('[data-target="view-transactions"]').click();
+        DOM.expenseDescription.focus();
+      }
+    }
+
+    // ======= RENDERING =======
+    function attachListeners(uid) {
+      // Cleanup old listeners
+      if(unsubIncome) unsubIncome();
+      if(unsubExpense) unsubExpense();
+      if(unsubBudget) unsubBudget();
+
+      if(!uid) return;
+
+      const qInc = query(collection(db, 'users', uid, 'income'), orderBy('date', 'desc'));
+      unsubIncome = onSnapshot(qInc, (snap) => {
+        incomeData = snap.docs.map(d => ({id: d.id, ...d.data()}));
+        renderUI();
+      });
+
+      const qExp = query(collection(db, 'users', uid, 'expenses'), orderBy('date', 'desc'));
+      unsubExpense = onSnapshot(qExp, (snap) => {
+        expenseData = snap.docs.map(d => ({id: d.id, ...d.data()}));
+        renderUI();
+      });
+
+      unsubBudget = onSnapshot(collection(db, 'users', uid, 'budgets'), (snap) => {
+        budgetData = {};
+        snap.forEach(d => budgetData[d.id] = d.data().amount);
+        renderUI();
+      });
+    }
+
+    function renderUI() {
+      let totalInc = 0, totalExp = 0;
+      let catTotals = {};
+      
+      // Render Lists & Calcs
+      DOM.incomeList.innerHTML = incomeData.map(i => {
+        totalInc += i.amount;
+        return `<li><span>${i.source}</span> <span>$${i.amount.toFixed(2)} 
+          <span class="entry-buttons">
+            <button onclick="window.editItem('income','${i.id}')" class="edit-btn"><i class="fas fa-pen"></i></button>
+            <button onclick="window.deleteItem('income','${i.id}')" class="delete-btn"><i class="fas fa-trash"></i></button>
+          </span></span></li>`;
+      }).join('') || '<li style="justify-content:center; opacity:0.5">No income yet</li>';
+
+      DOM.expenseList.innerHTML = expenseData.map(i => {
+        totalExp += i.amount;
+        const cat = i.category || 'Uncategorized';
+        catTotals[cat] = (catTotals[cat] || 0) + i.amount;
+        return `<li><span>${i.description} (${cat})</span> <span>$${i.amount.toFixed(2)}
+          <span class="entry-buttons">
+            <button onclick="window.editItem('expense','${i.id}')" class="edit-btn"><i class="fas fa-pen"></i></button>
+            <button onclick="window.deleteItem('expense','${i.id}')" class="delete-btn"><i class="fas fa-trash"></i></button>
+          </span></span></li>`;
+      }).join('') || '<li style="justify-content:center; opacity:0.5">No expenses yet</li>';
+
+      // Summary
+      DOM.summaryDiv.innerHTML = `
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+          <span>Total Income:</span> <span style="color:var(--success-color); font-weight:600;">$${totalInc.toFixed(2)}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+          <span>Total Expense:</span> <span style="color:var(--error-color); font-weight:600;">$${totalExp.toFixed(2)}</span>
+        </div>
+        <hr style="border:0; border-top:1px solid var(--card-border); margin:10px 0;">
+        <div style="display:flex; justify-content:space-between; font-size:1.2rem;">
+          <span>Balance:</span> <span style="color:${totalInc - totalExp >= 0 ? 'var(--text-color)' : 'var(--error-color)'};">$${(totalInc - totalExp).toFixed(2)}</span>
+        </div>
+      `;
+
+      // Budgets
+      const budgetHTML = Object.entries(budgetData).map(([cat, limit]) => {
+        const spent = catTotals[cat] || 0;
+        const pct = limit > 0 ? (spent / limit) * 100 : 0;
+        const colorClass = pct >= 100 ? 'budget-bar-red' : pct >= 80 ? 'budget-bar-yellow' : 'budget-bar-green';
+        return `
+          <div style="margin-bottom:15px;">
+            <div style="display:flex; justify-content:space-between; font-size:0.9rem;">
+              <span>${cat}</span>
+              <span>$${spent.toFixed(2)} / $${limit.toFixed(2)}</span>
+            </div>
+            <div class="budget-bar-container">
+              <div class="budget-bar-fill ${colorClass}" style="width: ${Math.min(pct, 100)}%"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      DOM.budgetListContainer.innerHTML = budgetHTML || '<p style="text-align:center; opacity:0.6; padding:20px;">No budgets set.</p>';
+
+      // Update Charts
+      updateCharts(catTotals, totalInc, totalExp);
+    }
+
+    function updateCharts(catTotals = {}, inc = 0, exp = 0) {
+      // Only render if view is active or data changed
+      const isDark = !document.body.classList.contains('light');
+      const textColor = isDark ? '#e0e0e0' : '#2d3748';
+
+      // Category Chart
+      if(categoryChartInstance) categoryChartInstance.destroy();
+      categoryChartInstance = new Chart(DOM.catChart, {
+        type: 'doughnut',
+        data: {
+          labels: Object.keys(catTotals),
+          datasets: [{
+            data: Object.values(catTotals),
+            backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom', labels: { color: textColor } } }
+        }
+      });
+
+      // Trend Chart
+      if(trendChartInstance) trendChartInstance.destroy();
+      trendChartInstance = new Chart(DOM.trendChart, {
+        type: 'bar',
+        data: {
+          labels: ['Financial Status'],
+          datasets: [
+            { label: 'Income', data: [inc], backgroundColor: '#48bb78' },
+            { label: 'Expense', data: [exp], backgroundColor: '#ff6b6b' }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: { beginAtZero: true, ticks: { color: textColor }, grid: { color: isDark ? '#333' : '#ddd' } },
+            x: { ticks: { color: textColor }, grid: { display: false } }
+          },
+          plugins: { legend: { labels: { color: textColor } } }
+        }
+      });
+    }
+
+    // ======= INITIALIZATION =======
+    document.addEventListener('DOMContentLoaded', () => {
+      setupNavigation();
+      
+      // Restore Theme
+      if(localStorage.getItem('theme') === 'light') {
+        document.body.classList.add('light');
+        DOM.themeToggle.innerHTML = '<i class="fa-solid fa-sun"></i>';
+      }
+
+      // Global Event Listeners
+      document.getElementById('show-register').onclick = () => showSection('register-section');
+      document.getElementById('show-login').onclick = () => showSection('login-section');
+      document.getElementById('login-btn').onclick = login;
+      document.getElementById('register-btn').onclick = register;
+      document.getElementById('logout-btn').onclick = () => signOut(auth);
+      
+      document.getElementById('add-income-btn').onclick = () => handleTransaction('income');
+      document.getElementById('add-expense-btn').onclick = () => handleTransaction('expense');
+      document.getElementById('set-budget-btn').onclick = setBudget;
+      DOM.themeToggle.onclick = toggleTheme;
+
+      // Input Listeners
+      DOM.regUser.oninput = validateRegForm;
+      DOM.regPass.oninput = validateRegForm;
+      DOM.regConfirm.oninput = validateRegForm;
+
+      // Expose helpers to window for inline HTML onclicks
+      window.editItem = editItem;
+      window.deleteItem = deleteItem;
+    });
+
+    // Auth Observer
+    onAuthStateChanged(auth, async (user) => {
+      if(user) {
+        const uDoc = await getDoc(doc(db, 'users', user.uid));
+        if(uDoc.exists()) DOM.userDisplayName.textContent = uDoc.data().username;
+        showSection('dashboard');
+        attachListeners(user.uid);
+      } else {
+        showSection('login-section');
+        attachListeners(null);
+      }
+    });
+  </script>
 </body>
 </html>
-
