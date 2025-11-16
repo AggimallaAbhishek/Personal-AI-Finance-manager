@@ -373,11 +373,12 @@
   <script type="module">
     // ======= FIREBASE CONFIGURATION =======
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-    // ADDED signInAnonymously and REMOVED unused auth methods
     import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
     import { getFirestore, enableIndexedDbPersistence, doc, getDoc, setDoc, updateDoc, addDoc, collection, serverTimestamp, onSnapshot, orderBy, query, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
-    // REPLACE THESE WITH YOUR ACTUAL FIREBASE KEYS
+    // ==========================================================
+    // ==  PASTE YOUR FIREBASE CONFIG KEYS FROM YOUR PROJECT   ==
+    // ==========================================================
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY_HERE",
       authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
@@ -386,6 +387,9 @@
       messagingSenderId: "YOUR_SENDER_ID",
       appId: "YOUR_APP_ID"
     };
+    // ==========================================================
+    // ==========================================================
+
 
     let app, auth, db;
     try {
@@ -470,9 +474,9 @@
       editingIncomeId = null; editingExpenseId = null;
     }
 
+    // == THIS FUNCTION HAS BEEN UPDATED ==
     async function handleTransaction(type) {
       const uid = auth.currentUser?.uid;
-      // This check is now for anonymous auth, not full login
       if(!uid) return showMessage("Cannot save data. Please refresh.", true);
 
       const isIncome = type === 'income';
@@ -492,15 +496,21 @@
 
       try {
         if(id) {
+          // Add 'updatedAt' timestamp
+          data.updatedAt = serverTimestamp();
           await updateDoc(doc(db, 'users', uid, collectionName, id), data);
           showMessage("Entry updated");
         } else {
           data.date = serverTimestamp();
+          // Also add 'updatedAt' on creation
+          data.updatedAt = serverTimestamp();
           await addDoc(collection(db, 'users', uid, collectionName), data);
           showMessage("Entry added");
         }
         resetForms();
       } catch(e) {
+        // Add console.error for better debugging
+        console.error("Save Error:", e);
         showMessage("Error saving data", true);
       }
     }
@@ -698,7 +708,6 @@
       }
 
       // --- Global Event Listeners ---
-      // Removed logout listener
       document.getElementById('add-income-btn').onclick = () => handleTransaction('income');
       document.getElementById('add-expense-btn').onclick = () => handleTransaction('expense');
       document.getElementById('set-budget-btn').onclick = setBudget;
@@ -713,7 +722,6 @@
       if(user) {
         // User is signed in (either fully or anonymously)
         console.log("User active with UID:", user.uid);
-        // We don't need to fetch a username, just attach listeners
         attachListeners(user.uid);
       } else {
         // No user is signed in. Sign them in anonymously.
