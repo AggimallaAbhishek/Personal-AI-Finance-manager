@@ -63,9 +63,59 @@
     }
     .section-enter { animation: section-fade-in 0.4s ease-out forwards; }
     
-    /* ======= DASHBOARD STYLES ======= */
-    .dashboard-section {
+    /* ======= LOGIN SCREEN (NEW) ======= */
+    #login-screen {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-image: var(--bg-gradient);
       display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+    
+    .login-card {
+      background-image: var(--card-bg-gradient);
+      padding: 40px 30px;
+      border-radius: 15px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--card-border);
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+      animation: section-fade-in 0.3s ease-out;
+    }
+
+    .login-card .logo-icon {
+      font-size: 3rem;
+      color: var(--primary-color);
+      margin-bottom: 10px;
+    }
+    
+    .login-card h2 {
+      margin-top: 0;
+      margin-bottom: 25px;
+    }
+
+    .login-card input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      background: var(--input-bg);
+      color: var(--text-color);
+      font-size: 1rem;
+      margin-bottom: 20px;
+      box-sizing: border-box;
+      text-align: center;
+    }
+    
+    /* ======= DASHBOARD STYLES ======= */
+    /* By default, dashboard is hidden, login is visible */
+    .dashboard-section {
+      display: none; /* Changed from flex */
       flex-direction: column;
       min-height: 100vh;
       width: 100%;
@@ -88,6 +138,13 @@
 
     .header-left, .header-right { display: flex; align-items: center; gap: 20px; }
     
+    /* NEW: Header Actions Container */
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
     .logo-container { display: flex; align-items: center; gap: 12px; }
     .logo-icon { font-size: 1.8rem; color: var(--primary-color); }
     .logo-text { font-size: 1.2rem; font-weight: 600; margin: 0; }
@@ -129,8 +186,12 @@
       border-radius: 50%;
       cursor: pointer;
       transition: all 0.3s ease;
+      width: 38px; height: 38px;
+      display: flex; align-items: center; justify-content: center;
     }
     .action-btn:hover { background: var(--hover-bg); color: var(--primary-color); }
+    /* NEW: Logout button specific hover */
+    #logout-btn:hover { color: var(--error-color); }
 
     /* Main Content Area */
     .dashboard-container {
@@ -191,12 +252,15 @@
     .form-btn {
       background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
       color: white;
-      border: none; padding: 10px 20px;
+      border: none; padding: 12px 20px; /* Increased padding */
       border-radius: 8px; font-weight: 600;
       cursor: pointer; width: 100%;
-      transition: transform 0.2s;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
-    .form-btn:hover { transform: translateY(-2px); }
+    .form-btn:hover { 
+      transform: translateY(-2px); 
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
 
     /* Lists */
     .entry-list { list-style: none; padding: 0; margin-top: 15px; }
@@ -248,14 +312,27 @@
       #view-transactions.active { grid-template-columns: 1fr; }
     }
     @media (max-width: 768px) {
-      .nav-link span, .logo-text, .user-details { display: none; }
+      .nav-link span, .logo-text { display: none; }
+      .user-details { display: none; }
       .dashboard-container { padding: 15px; }
     }
   </style>
 </head>
 <body>
 
-  <section id="dashboard" class="dashboard-section" style="display:flex;">
+  <!-- ======= NEW LOGIN SCREEN ======= -->
+  <section id="login-screen">
+    <div class="login-card">
+      <i class="fa-solid fa-wallet logo-icon"></i>
+      <h2>Welcome, Guest</h2>
+      <label classs="field-label" style="opacity: 0.8; font-size: 0.9rem;">Please enter a display name</label>
+      <input type="text" id="guest-name-input" placeholder="e.g. Guest 123" />
+      <button id="login-btn" class="form-btn">Log In</button>
+    </div>
+  </section>
+
+  <!-- ======= MAIN APP (HIDDEN BY DEFAULT) ======= -->
+  <section id="dashboard" class="dashboard-section">
     <header class="app-header">
       <div class="header-left">
         <div class="logo-container">
@@ -280,14 +357,18 @@
           <div class="user-avatar"><i class="fa-solid fa-user-astronaut"></i></div>
           <div class="user-details">
             <span class="user-name" id="user-display-name">Guest User</span>
-            <span class="user-status">Online</span>
+            <span class="user-status" id="user-status">Offline</span>
           </div>
         </div>
         <div class="header-actions">
           <button class="action-btn" id="theme-toggle" title="Toggle Theme">
             <i class="fa-solid fa-moon"></i>
           </button>
-          </div>
+          <!-- NEW LOGOUT BUTTON -->
+          <button class="action-btn" id="logout-btn" title="Logout">
+            <i class="fa-solid fa-right-from-bracket"></i>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -373,7 +454,8 @@
   <script type="module">
     // ======= FIREBASE CONFIGURATION =======
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+    // SignOut has been added
+    import { getAuth, onAuthStateChanged, signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
     import { getFirestore, enableIndexedDbPersistence, doc, getDoc, setDoc, updateDoc, addDoc, collection, serverTimestamp, onSnapshot, orderBy, query, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
     // ==========================================================
@@ -402,10 +484,17 @@
       alert("Error connecting to Firebase. Check your configuration keys in the script tag.");
     }
 
-    // ======= DOM ELEMENTS =======
+    // ======= DOM ELEMENTS (UPDATED) =======
     const DOM = {
+      // New login elements
+      loginScreen: document.getElementById('login-screen'),
+      guestNameInput: document.getElementById('guest-name-input'),
+      loginBtn: document.getElementById('login-btn'),
+      logoutBtn: document.getElementById('logout-btn'),
+      
       dashboardSection: document.getElementById('dashboard'),
       userDisplayName: document.getElementById('user-display-name'),
+      userStatus: document.getElementById('user-status'),
       messageDiv: document.getElementById('message'),
       summaryDiv: document.getElementById('summary'),
       budgetListContainer: document.getElementById('budget-list-container'),
@@ -464,6 +553,60 @@
       });
     }
 
+    // ======= NEW AUTH FUNCTIONS (LOGIN/LOGOUT) =======
+    async function login() {
+      const guestName = DOM.guestNameInput.value.trim();
+      if (!guestName) {
+        return showMessage("Please enter a name", true);
+      }
+      
+      try {
+        // 1. Sign in anonymously to get a stable UID
+        const userCredential = await signInAnonymously(auth);
+        const uid = userCredential.user.uid;
+        
+        // 2. Save the chosen display name to Firestore (associates name with UID)
+        // We use { merge: true } so it doesn't overwrite other data if user exists
+        await setDoc(doc(db, 'users', uid), { 
+          displayName: guestName,
+          createdAt: serverTimestamp() 
+        }, { merge: true });
+
+        // 3. Save name to localStorage to persist "session"
+        localStorage.setItem('guestName', guestName);
+        
+        // 4. Update UI (this will also be handled by onAuthStateChanged)
+        DOM.userDisplayName.textContent = guestName;
+        DOM.loginScreen.style.display = 'none';
+        DOM.dashboardSection.style.display = 'flex';
+        
+        // onAuthStateChanged will fire and call attachListeners
+        
+      } catch (error) {
+        console.error("Login Error: ", error);
+        showMessage("Could not log in. Check console.", true);
+      }
+    }
+
+    async function logout() {
+      try {
+        await signOut(auth);
+        localStorage.removeItem('guestName');
+        
+        // Reset UI
+        DOM.userDisplayName.textContent = "Guest User";
+        DOM.userStatus.textContent = "Offline";
+        DOM.loginScreen.style.display = 'flex';
+        DOM.dashboardSection.style.display = 'none';
+        
+        // Clear all data from the screen
+        attachListeners(null); 
+      } catch (error) {
+        console.error("Logout Error: ", error);
+      }
+    }
+
+
     // ======= DATA LOGIC =======
     function resetForms() {
       DOM.incomeSource.value = ''; DOM.incomeAmount.value = '';
@@ -474,10 +617,9 @@
       editingIncomeId = null; editingExpenseId = null;
     }
 
-    // == THIS FUNCTION HAS BEEN UPDATED ==
     async function handleTransaction(type) {
       const uid = auth.currentUser?.uid;
-      if(!uid) return showMessage("Cannot save data. Please refresh.", true);
+      if(!uid) return showMessage("You are not logged in.", true);
 
       const isIncome = type === 'income';
       const collectionName = isIncome ? 'income' : 'expenses';
@@ -496,28 +638,25 @@
 
       try {
         if(id) {
-          // Add 'updatedAt' timestamp
           data.updatedAt = serverTimestamp();
           await updateDoc(doc(db, 'users', uid, collectionName, id), data);
           showMessage("Entry updated");
         } else {
           data.date = serverTimestamp();
-          // Also add 'updatedAt' on creation
           data.updatedAt = serverTimestamp();
           await addDoc(collection(db, 'users', uid, collectionName), data);
           showMessage("Entry added");
         }
         resetForms();
       } catch(e) {
-        // Add console.error for better debugging
         console.error("Save Error:", e);
-        showMessage("Error saving data. Check console for details.", true);
+        showMessage("Error saving data. Check console.", true);
       }
     }
 
     async function setBudget() {
       const uid = auth.currentUser?.uid;
-      if(!uid) return showMessage("Cannot save data. Please refresh.", true);
+      if(!uid) return showMessage("You are not logged in.", true);
 
       const cat = DOM.budgetCategory.value.trim();
       const amt = parseFloat(DOM.budgetAmount.value);
@@ -525,6 +664,8 @@
       if(!cat || !amt) return showMessage("Invalid budget data", true);
       
       try {
+        // Note: This sets the budget as a document ID.
+        // This is fine for this app's logic.
         await setDoc(doc(db, 'users', uid, 'budgets', cat), { amount: amt });
         showMessage("Budget set");
         resetForms();
@@ -537,7 +678,7 @@
     async function deleteItem(type, id) {
       if(!confirm("Delete this item?")) return;
       const uid = auth.currentUser?.uid;
-      if(!uid) return showMessage("Cannot delete data. Please refresh.", true);
+      if(!uid) return showMessage("You are not logged in.", true);
 
       const col = type === 'income' ? 'income' : 'expenses';
       await deleteDoc(doc(db, 'users', uid, col, id));
@@ -569,11 +710,13 @@
 
     // ======= RENDERING =======
     function attachListeners(uid) {
+      // Unsubscribe from old listeners
       if(unsubIncome) unsubIncome();
       if(unsubExpense) unsubExpense();
       if(unsubBudget) unsubBudget();
 
       if(!uid) {
+        // If logged out, clear all data
         incomeData = []; expenseData = []; budgetData = {};
         renderUI();
         return;
@@ -586,7 +729,7 @@
         renderUI();
       }, (error) => {
         console.error("Income Snapshot Error: ", error);
-        showMessage("Could not load income. Check console for errors.", true);
+        showMessage("Could not load income. Check console.", true);
       });
 
       // Query for expenses
@@ -596,7 +739,7 @@
         renderUI();
       }, (error) => {
         console.error("Expense Snapshot Error: ", error);
-        showMessage("Could not load expenses. Check console for errors.", true);
+        showMessage("Could not load expenses. Check console.", true);
       });
 
       // Query for budgets
@@ -606,7 +749,7 @@
         renderUI();
       }, (error) => {
         console.error("Budget Snapshot Error: ", error);
-        showMessage("Could not load budgets. Check console for errors.", true);
+        showMessage("Could not load budgets. Check console.", true);
       });
     }
 
@@ -716,7 +859,7 @@
         options: {
           responsive: true,
           scales: {
-            y: { beginAtZero: true, ticks: { color: textColor }, grid: { color: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' } },
+            y: { beginAtZero: true, ticks: { color: textColor }, grid: { color: isDark ? 'rgba(255,255,25_0.1)' : 'rgba(0,0,0,0.1)' } },
             x: { ticks: { color: textColor }, grid: { display: false } }
           },
           plugins: { legend: { labels: { color: textColor } } }
@@ -733,7 +876,10 @@
         DOM.themeToggle.innerHTML = '<i class="fa-solid fa-sun"></i>';
       }
 
-      // --- Global Event Listeners ---
+      // --- Global Event Listeners (UPDATED) ---
+      DOM.loginBtn.onclick = login;
+      DOM.logoutBtn.onclick = logout;
+      
       document.getElementById('add-income-btn').onclick = () => handleTransaction('income');
       document.getElementById('add-expense-btn').onclick = () => handleTransaction('expense');
       document.getElementById('set-budget-btn').onclick = setBudget;
@@ -744,25 +890,32 @@
       window.deleteItem = deleteItem;
     });
 
-    // ======= AUTH OBSERVER (MODIFIED) =======
+    // ======= AUTH OBSERVER (HEAVILY MODIFIED) =======
+    // This now handles showing/hiding the login screen based on session
     onAuthStateChanged(auth, async (user) => {
-      if(user) {
-        // User is signed in (either fully or anonymously)
+      const guestName = localStorage.getItem('guestName');
+
+      if (user && guestName) {
+        // User is authenticated AND has a guest name in storage
+        // This is a "logged in" session
         console.log("User active with UID:", user.uid);
-        DOM.userDisplayName.textContent = "Anonymous User";
+        DOM.userDisplayName.textContent = guestName;
         DOM.userStatus.textContent = "Online";
+        
+        DOM.loginScreen.style.display = 'none';
+        DOM.dashboardSection.style.display = 'flex';
+        
         attachListeners(user.uid);
       } else {
-        // No user is signed in. Sign them in anonymously.
-        console.log("No user found. Signing in anonymously...");
-        try {
-          await signInAnonymously(auth);
-          // This will re-trigger onAuthStateChanged, and the `if(user)`
-          // block above will run, attaching the listeners.
-        } catch (error) {
-          console.error("Anonymous sign-in failed: ", error);
-          showMessage("Could not connect to service. Data cannot be saved.", true);
-        }
+        // User is not logged in or has no guest name
+        // Show login screen
+        console.log("No user session. Forcing login.");
+        
+        DOM.loginScreen.style.display = 'flex';
+        DOM.dashboardSection.style.display = 'none';
+        
+        // Clear any old data
+        attachListeners(null); 
       }
     });
   </script>
