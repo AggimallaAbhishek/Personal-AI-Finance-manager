@@ -62,8 +62,6 @@
       to { opacity: 1; transform: translateY(0); }
     }
     .section-enter { animation: section-fade-in 0.4s ease-out forwards; }
-
-    /* ======= AUTHENTICATION STYLES (REMOVED) ======= */
     
     /* ======= DASHBOARD STYLES ======= */
     .dashboard-section {
@@ -279,9 +277,9 @@
       
       <div class="header-right">
         <div class="user-info">
-          <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
+          <div class="user-avatar"><i class="fa-solid fa-user-astronaut"></i></div>
           <div class="user-details">
-            <span class="user-name" id="user-display-name">User</span>
+            <span class="user-name" id="user-display-name">Guest User</span>
             <span class="user-status">Online</span>
           </div>
         </div>
@@ -289,10 +287,7 @@
           <button class="action-btn" id="theme-toggle" title="Toggle Theme">
             <i class="fa-solid fa-moon"></i>
           </button>
-          <button class="action-btn" id="logout-btn" title="Logout">
-            <i class="fa-solid fa-right-from-bracket"></i>
-          </button>
-        </div>
+          </div>
       </div>
     </header>
 
@@ -378,8 +373,9 @@
   <script type="module">
     // ======= FIREBASE CONFIGURATION =======
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
-    import { getFirestore, enableIndexedDbPersistence, doc, getDoc, setDoc, updateDoc, addDoc, collection, serverTimestamp, onSnapshot, orderBy, query, deleteDoc, runTransaction } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    // ADDED signInAnonymously and REMOVED unused auth methods
+    import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+    import { getFirestore, enableIndexedDbPersistence, doc, getDoc, setDoc, updateDoc, addDoc, collection, serverTimestamp, onSnapshot, orderBy, query, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
     // REPLACE THESE WITH YOUR ACTUAL FIREBASE KEYS
     const firebaseConfig = {
@@ -396,7 +392,6 @@
       app = initializeApp(firebaseConfig);
       auth = getAuth(app);
       db = getFirestore(app);
-      // Persistence attempt (optional)
       enableIndexedDbPersistence(db).catch(err => console.log("Persistence error:", err.code));
     } catch (error) {
       console.error("Firebase init error:", error);
@@ -405,7 +400,6 @@
 
     // ======= DOM ELEMENTS =======
     const DOM = {
-      // Sections removed: loginSection, registerSection
       dashboardSection: document.getElementById('dashboard'),
       userDisplayName: document.getElementById('user-display-name'),
       messageDiv: document.getElementById('message'),
@@ -421,8 +415,6 @@
       expenseAmount: document.getElementById('expense-amount'),
       budgetCategory: document.getElementById('budget-category'),
       budgetAmount: document.getElementById('budget-amount'),
-      // Auth Inputs (Elements removed)
-      // Auth Status (Elements removed)
       // Charts
       catChart: document.getElementById('categoryChart'),
       trendChart: document.getElementById('incomeExpenseChart'),
@@ -437,21 +429,8 @@
     let editingIncomeId = null, editingExpenseId = null;
     let unsubIncome, unsubExpense, unsubBudget;
     let incomeData = [], expenseData = [], budgetData = {};
-    // usernameTimer removed as reg form is gone
 
     // ======= UTILITY FUNCTIONS =======
-    function showSection(sectionId) {
-      // This function is no longer needed to switch between auth/dashboard,
-      // but we keep it in case you add other main sections later.
-      // For now, it's simplified as the dashboard is always visible.
-      const target = document.getElementById(sectionId);
-      if(target) {
-        target.style.display = sectionId === 'dashboard' ? 'flex' : 'flex';
-        target.classList.add('section-enter');
-        setTimeout(() => target.classList.remove('section-enter'), 400);
-      }
-    }
-
     function showMessage(msg, isError = false) {
       DOM.messageDiv.textContent = msg;
       DOM.messageDiv.className = isError ? 'message-box error show' : 'message-box success show';
@@ -481,11 +460,6 @@
       });
     }
 
-    // ======= AUTH LOGIC (LOGIN/REGISTER REMOVED) =======
-    // `login` function removed
-    // `register` function removed
-    // `validateRegForm` function removed
-
     // ======= DATA LOGIC =======
     function resetForms() {
       DOM.incomeSource.value = ''; DOM.incomeAmount.value = '';
@@ -498,7 +472,8 @@
 
     async function handleTransaction(type) {
       const uid = auth.currentUser?.uid;
-      if(!uid) return showMessage("You must be logged in to add data.", true);
+      // This check is now for anonymous auth, not full login
+      if(!uid) return showMessage("Cannot save data. Please refresh.", true);
 
       const isIncome = type === 'income';
       const collectionName = isIncome ? 'income' : 'expenses';
@@ -532,7 +507,7 @@
 
     async function setBudget() {
       const uid = auth.currentUser?.uid;
-      if(!uid) return showMessage("You must be logged in to set a budget.", true);
+      if(!uid) return showMessage("Cannot save data. Please refresh.", true);
 
       const cat = DOM.budgetCategory.value.trim();
       const amt = parseFloat(DOM.budgetAmount.value);
@@ -549,7 +524,7 @@
     async function deleteItem(type, id) {
       if(!confirm("Delete this item?")) return;
       const uid = auth.currentUser?.uid;
-      if(!uid) return showMessage("You are not logged in.", true);
+      if(!uid) return showMessage("Cannot delete data. Please refresh.", true);
 
       const col = type === 'income' ? 'income' : 'expenses';
       await deleteDoc(doc(db, 'users', uid, col, id));
@@ -586,7 +561,6 @@
       if(unsubBudget) unsubBudget();
 
       if(!uid) {
-        // If logged out, clear all data
         incomeData = []; expenseData = []; budgetData = {};
         renderUI();
         return;
@@ -724,33 +698,34 @@
       }
 
       // --- Global Event Listeners ---
-      // Removed listeners for show-register, show-login, login-btn, register-btn
-      document.getElementById('logout-btn').onclick = () => signOut(auth);
+      // Removed logout listener
       document.getElementById('add-income-btn').onclick = () => handleTransaction('income');
       document.getElementById('add-expense-btn').onclick = () => handleTransaction('expense');
       document.getElementById('set-budget-btn').onclick = setBudget;
       DOM.themeToggle.onclick = toggleTheme;
-
-      // Input Listeners for reg form removed
       
       window.editItem = editItem;
       window.deleteItem = deleteItem;
     });
 
-    // Auth Observer
+    // ======= AUTH OBSERVER (MODIFIED) =======
     onAuthStateChanged(auth, async (user) => {
       if(user) {
-        const uDoc = await getDoc(doc(db, 'users', user.uid));
-        if(uDoc.exists()) {
-           DOM.userDisplayName.textContent = uDoc.data().username;
-        }
-        // No need to call showSection('dashboard'), it's already visible
+        // User is signed in (either fully or anonymously)
+        console.log("User active with UID:", user.uid);
+        // We don't need to fetch a username, just attach listeners
         attachListeners(user.uid);
       } else {
-        // --- MODIFIED ---
-        // Don't show login section, just clear the listeners
-        DOM.userDisplayName.textContent = "Guest";
-        attachListeners(null); 
+        // No user is signed in. Sign them in anonymously.
+        console.log("No user found. Signing in anonymously...");
+        try {
+          await signInAnonymously(auth);
+          // This will re-trigger onAuthStateChanged, and the `if(user)`
+          // block above will run, attaching the listeners.
+        } catch (error) {
+          console.error("Anonymous sign-in failed: ", error);
+          showMessage("Could not connect to service. Data cannot be saved.", true);
+        }
       }
     });
   </script>
