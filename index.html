@@ -511,7 +511,7 @@
       } catch(e) {
         // Add console.error for better debugging
         console.error("Save Error:", e);
-        showMessage("Error saving data", true);
+        showMessage("Error saving data. Check console for details.", true);
       }
     }
 
@@ -528,7 +528,10 @@
         await setDoc(doc(db, 'users', uid, 'budgets', cat), { amount: amt });
         showMessage("Budget set");
         resetForms();
-      } catch(e) { console.error(e); }
+      } catch(e) { 
+        console.error("Budget Error:", e);
+        showMessage("Error saving budget. Check console.", true);
+      }
     }
 
     async function deleteItem(type, id) {
@@ -576,22 +579,34 @@
         return;
       }
 
+      // Query for income
       const qInc = query(collection(db, 'users', uid, 'income'), orderBy('date', 'desc'));
       unsubIncome = onSnapshot(qInc, (snap) => {
         incomeData = snap.docs.map(d => ({id: d.id, ...d.data()}));
         renderUI();
+      }, (error) => {
+        console.error("Income Snapshot Error: ", error);
+        showMessage("Could not load income. Check console for errors.", true);
       });
 
+      // Query for expenses
       const qExp = query(collection(db, 'users', uid, 'expenses'), orderBy('date', 'desc'));
       unsubExpense = onSnapshot(qExp, (snap) => {
         expenseData = snap.docs.map(d => ({id: d.id, ...d.data()}));
         renderUI();
+      }, (error) => {
+        console.error("Expense Snapshot Error: ", error);
+        showMessage("Could not load expenses. Check console for errors.", true);
       });
 
+      // Query for budgets
       unsubBudget = onSnapshot(collection(db, 'users', uid, 'budgets'), (snap) => {
         budgetData = {};
         snap.forEach(d => budgetData[d.id] = d.data().amount);
         renderUI();
+      }, (error) => {
+        console.error("Budget Snapshot Error: ", error);
+        showMessage("Could not load budgets. Check console for errors.", true);
       });
     }
 
@@ -653,21 +668,29 @@
       }).join('');
       DOM.budgetListContainer.innerHTML = budgetHTML || '<p style="text-align:center; opacity:0.6; padding:20px;">No budgets set.</p>';
 
-      updateCharts(catTotals, totalInc, totalExp);
+      // Only update charts if the view is active or data is ready
+      if (document.getElementById('view-overview').classList.contains('active')) {
+        updateCharts(catTotals, totalInc, totalExp);
+      }
     }
 
     function updateCharts(catTotals = {}, inc = 0, exp = 0) {
       const isDark = !document.body.classList.contains('light');
       const textColor = isDark ? '#e0e0e0' : '#2d3748';
 
-      if(categoryChartInstance) categoryChartInstance.destroy();
+      // Check for existing chart instance and destroy it
+      if(categoryChartInstance) {
+        categoryChartInstance.destroy();
+      }
       categoryChartInstance = new Chart(DOM.catChart, {
         type: 'doughnut',
         data: {
-          labels: Object.keys(catTotals),
+          labels: Object.keys(catTotals).length > 0 ? Object.keys(catTotals) : ['No Data'],
           datasets: [{
-            data: Object.values(catTotals),
-            backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
+            data: Object.keys(catTotals).length > 0 ? Object.values(catTotals) : [1],
+            backgroundColor: Object.keys(catTotals).length > 0 
+              ? ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
+              : ['#333'],
             borderWidth: 0
           }]
         },
@@ -677,7 +700,10 @@
         }
       });
 
-      if(trendChartInstance) trendChartInstance.destroy();
+      // Check for existing chart instance and destroy it
+      if(trendChartInstance) {
+        trendChartInstance.destroy();
+      }
       trendChartInstance = new Chart(DOM.trendChart, {
         type: 'bar',
         data: {
@@ -690,7 +716,7 @@
         options: {
           responsive: true,
           scales: {
-            y: { beginAtZero: true, ticks: { color: textColor }, grid: { color: isDark ? '#333' : '#ddd' } },
+            y: { beginAtZero: true, ticks: { color: textColor }, grid: { color: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' } },
             x: { ticks: { color: textColor }, grid: { display: false } }
           },
           plugins: { legend: { labels: { color: textColor } } }
@@ -713,6 +739,7 @@
       document.getElementById('set-budget-btn').onclick = setBudget;
       DOM.themeToggle.onclick = toggleTheme;
       
+      // Make edit/delete functions globally accessible
       window.editItem = editItem;
       window.deleteItem = deleteItem;
     });
@@ -722,6 +749,8 @@
       if(user) {
         // User is signed in (either fully or anonymously)
         console.log("User active with UID:", user.uid);
+        DOM.userDisplayName.textContent = "Anonymous User";
+        DOM.userStatus.textContent = "Online";
         attachListeners(user.uid);
       } else {
         // No user is signed in. Sign them in anonymously.
