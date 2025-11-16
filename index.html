@@ -63,82 +63,8 @@
     }
     .section-enter { animation: section-fade-in 0.4s ease-out forwards; }
 
-    /* ======= AUTHENTICATION STYLES ======= */
-    .auth-container {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      width: 100%;
-      padding: 20px;
-      box-sizing: border-box;
-    }
-
-    .auth-card {
-      background-image: var(--card-bg-gradient);
-      padding: 40px;
-      border-radius: 20px;
-      box-shadow: var(--shadow);
-      width: 400px;
-      max-width: 90%;
-      text-align: center;
-      border: 1px solid var(--card-border);
-    }
-
-    .auth-card .logo { font-size: 1.5rem; margin-bottom: 2rem; }
-    .auth-form h2 { margin-bottom: 1.5rem; font-weight: 500; }
-
-    .auth-form input {
-      width: 100%;
-      padding: 12px;
-      margin-bottom: 5px;
-      border: 1px solid var(--input-border);
-      border-radius: 8px;
-      background: var(--input-bg);
-      color: var(--text-color);
-      font-size: 1rem;
-      transition: all 0.2s ease;
-      box-sizing: border-box;
-    }
-
-    .auth-form input:focus {
-      outline: none;
-      border-color: var(--primary-color);
-      box-shadow: 0 0 0 3px rgba(106, 17, 203, 0.3);
-    }
-
-    .input-hint {
-      display: block;
-      height: 18px;
-      font-size: 0.75rem;
-      text-align: left;
-      padding-left: 5px;
-      margin-bottom: 10px;
-      color: var(--text-color);
-      opacity: 0.7;
-    }
-    .input-hint.error { color: var(--error-color); opacity: 1; }
-    .input-hint.success { color: var(--success-color); opacity: 1; }
-
-    .auth-form button {
-      width: 100%;
-      padding: 12px;
-      border: none;
-      border-radius: 8px;
-      background-image: linear-gradient(to right, var(--primary-color), var(--secondary-color));
-      color: white;
-      font-size: 1rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-      margin-top: 1rem;
-    }
-    .auth-form button:disabled { background: #555; cursor: not-allowed; opacity: 0.6; }
-    .auth-form button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); }
-
-    .toggle-link { font-size: 0.9rem; margin-top: 20px; }
-    .toggle-link a { color: var(--secondary-color); text-decoration: none; font-weight: 600; }
-
+    /* ======= AUTHENTICATION STYLES (REMOVED) ======= */
+    
     /* ======= DASHBOARD STYLES ======= */
     .dashboard-section {
       display: flex;
@@ -331,40 +257,7 @@
 </head>
 <body>
 
-  <section id="login-section" class="auth-container">
-    <div class="auth-card">
-      <h1 class="logo"><i class="fa-solid fa-wallet"></i> Finance Manager</h1>
-      <div class="auth-form">
-        <h2>Login</h2>
-        <input type="text" id="login-username" placeholder="Username" required />
-        <input type="password" id="login-password" placeholder="Password" required />
-        <button id="login-btn"><i class="fa-solid fa-right-to-bracket"></i> Login</button>
-        <p class="toggle-link">Don't have an account? <a href="#" id="show-register">Register here.</a></p>
-      </div>
-    </div>
-  </section>
-
-  <section id="register-section" class="auth-container" style="display:none;">
-    <div class="auth-card">
-      <h1 class="logo"><i class="fa-solid fa-wallet"></i> Finance Manager</h1>
-      <div class="auth-form">
-        <h2>Create Account</h2>
-        <input type="text" id="reg-username" placeholder="Username" required />
-        <small id="username-status" class="input-hint"></small>
-        
-        <input type="password" id="reg-password" placeholder="Password" required />
-        <small id="password-requirements" class="input-hint">8+ chars, 1 uppercase, 1 special char.</small>
-        
-        <input type="password" id="reg-confirm-password" placeholder="Confirm Password" required />
-        <small id="confirm-password-status" class="input-hint"></small>
-
-        <button id="register-btn" disabled><i class="fa-solid fa-user-plus"></i> Register</button>
-        <p class="toggle-link">Already have an account? <a href="#" id="show-login">Login here.</a></p>
-      </div>
-    </div>
-  </section>
-
-  <section id="dashboard" class="dashboard-section" style="display:none;">
+  <section id="dashboard" class="dashboard-section" style="display:flex;">
     <header class="app-header">
       <div class="header-left">
         <div class="logo-container">
@@ -512,8 +405,7 @@
 
     // ======= DOM ELEMENTS =======
     const DOM = {
-      loginSection: document.getElementById('login-section'),
-      registerSection: document.getElementById('register-section'),
+      // Sections removed: loginSection, registerSection
       dashboardSection: document.getElementById('dashboard'),
       userDisplayName: document.getElementById('user-display-name'),
       messageDiv: document.getElementById('message'),
@@ -529,17 +421,8 @@
       expenseAmount: document.getElementById('expense-amount'),
       budgetCategory: document.getElementById('budget-category'),
       budgetAmount: document.getElementById('budget-amount'),
-      // Auth Inputs
-      loginUser: document.getElementById('login-username'),
-      loginPass: document.getElementById('login-password'),
-      regUser: document.getElementById('reg-username'),
-      regPass: document.getElementById('reg-password'),
-      regConfirm: document.getElementById('reg-confirm-password'),
-      // Auth Status
-      userStatus: document.getElementById('username-status'),
-      passReq: document.getElementById('password-requirements'),
-      confirmStatus: document.getElementById('confirm-password-status'),
-      regBtn: document.getElementById('register-btn'),
+      // Auth Inputs (Elements removed)
+      // Auth Status (Elements removed)
       // Charts
       catChart: document.getElementById('categoryChart'),
       trendChart: document.getElementById('incomeExpenseChart'),
@@ -554,15 +437,13 @@
     let editingIncomeId = null, editingExpenseId = null;
     let unsubIncome, unsubExpense, unsubBudget;
     let incomeData = [], expenseData = [], budgetData = {};
-    let usernameTimer;
+    // usernameTimer removed as reg form is gone
 
     // ======= UTILITY FUNCTIONS =======
     function showSection(sectionId) {
-      // Hide all main sections
-      [DOM.loginSection, DOM.registerSection, DOM.dashboardSection].forEach(sec => {
-        if(sec) sec.style.display = 'none';
-      });
-      
+      // This function is no longer needed to switch between auth/dashboard,
+      // but we keep it in case you add other main sections later.
+      // For now, it's simplified as the dashboard is always visible.
       const target = document.getElementById(sectionId);
       if(target) {
         target.style.display = sectionId === 'dashboard' ? 'flex' : 'flex';
@@ -590,92 +471,20 @@
       DOM.navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
           e.preventDefault();
-          // Remove active class from links
           DOM.navLinks.forEach(l => l.classList.remove('active'));
           link.classList.add('active');
-          
-          // Hide all views
           DOM.views.forEach(view => view.classList.remove('active'));
-          
-          // Show target view
           const targetId = link.getAttribute('data-target');
           document.getElementById(targetId).classList.add('active');
-          
-          // If switching to Overview, refresh charts to ensure size is correct
           if(targetId === 'view-overview') updateCharts();
         });
       });
     }
 
-    // ======= AUTH LOGIC =======
-    async function login() {
-      const user = DOM.loginUser.value.trim();
-      const pass = DOM.loginPass.value;
-      if(!user || !pass) return showMessage("Enter username and password", true);
-      
-      try {
-        await signInWithEmailAndPassword(auth, `${user.toLowerCase()}@pfm.local`, pass);
-      } catch(e) {
-        showMessage("Login failed. Check credentials.", true);
-        console.error(e);
-      }
-    }
-
-    async function register() {
-      const user = DOM.regUser.value.trim();
-      const pass = DOM.regPass.value;
-      
-      try {
-        const email = `${user.toLowerCase()}@pfm.local`;
-        const cred = await createUserWithEmailAndPassword(auth, email, pass);
-        
-        // Store username mapping
-        await setDoc(doc(db, 'usernames', user.toLowerCase()), { uid: cred.user.uid });
-        await setDoc(doc(db, 'users', cred.user.uid), { username: user });
-        
-        showMessage("Registration successful!");
-        showSection('login-section');
-      } catch(e) {
-        showMessage(e.message, true);
-      }
-    }
-
-    // Form Validation
-    function validateRegForm() {
-      clearTimeout(usernameTimer);
-      const user = DOM.regUser.value.trim();
-      const pass = DOM.regPass.value;
-      const confirm = DOM.regConfirm.value;
-      
-      // Password Check
-      const passValid = /^(?=.*[A-Z])(?=.*[!@#$%^&*.,?]).{8,}$/.test(pass);
-      DOM.passReq.className = passValid ? 'input-hint success' : 'input-hint error';
-      
-      // Match Check
-      const match = pass === confirm && confirm.length > 0;
-      DOM.confirmStatus.textContent = match ? "Passwords match" : "Passwords do not match";
-      DOM.confirmStatus.className = match ? 'input-hint success' : 'input-hint error';
-
-      // Username Check (Debounced)
-      DOM.userStatus.textContent = "Checking...";
-      DOM.regBtn.disabled = true;
-      
-      usernameTimer = setTimeout(async () => {
-        if(user.length < 3) {
-           DOM.userStatus.textContent = "Too short";
-           return;
-        }
-        const snap = await getDoc(doc(db, 'usernames', user.toLowerCase()));
-        if(snap.exists()) {
-          DOM.userStatus.textContent = "Username taken";
-          DOM.userStatus.className = "input-hint error";
-        } else {
-          DOM.userStatus.textContent = "Username available";
-          DOM.userStatus.className = "input-hint success";
-          if(passValid && match) DOM.regBtn.disabled = false;
-        }
-      }, 500);
-    }
+    // ======= AUTH LOGIC (LOGIN/REGISTER REMOVED) =======
+    // `login` function removed
+    // `register` function removed
+    // `validateRegForm` function removed
 
     // ======= DATA LOGIC =======
     function resetForms() {
@@ -689,7 +498,7 @@
 
     async function handleTransaction(type) {
       const uid = auth.currentUser?.uid;
-      if(!uid) return;
+      if(!uid) return showMessage("You must be logged in to add data.", true);
 
       const isIncome = type === 'income';
       const collectionName = isIncome ? 'income' : 'expenses';
@@ -723,6 +532,8 @@
 
     async function setBudget() {
       const uid = auth.currentUser?.uid;
+      if(!uid) return showMessage("You must be logged in to set a budget.", true);
+
       const cat = DOM.budgetCategory.value.trim();
       const amt = parseFloat(DOM.budgetAmount.value);
       
@@ -737,8 +548,11 @@
 
     async function deleteItem(type, id) {
       if(!confirm("Delete this item?")) return;
+      const uid = auth.currentUser?.uid;
+      if(!uid) return showMessage("You are not logged in.", true);
+
       const col = type === 'income' ? 'income' : 'expenses';
-      await deleteDoc(doc(db, 'users', auth.currentUser.uid, col, id));
+      await deleteDoc(doc(db, 'users', uid, col, id));
       showMessage("Deleted");
     }
 
@@ -752,7 +566,6 @@
         DOM.incomeAmount.value = item.amount;
         document.getElementById('add-income-btn').textContent = 'Update';
         editingIncomeId = id;
-        // Switch tab to form
         document.querySelector('[data-target="view-transactions"]').click();
         DOM.incomeSource.focus();
       } else {
@@ -768,12 +581,16 @@
 
     // ======= RENDERING =======
     function attachListeners(uid) {
-      // Cleanup old listeners
       if(unsubIncome) unsubIncome();
       if(unsubExpense) unsubExpense();
       if(unsubBudget) unsubBudget();
 
-      if(!uid) return;
+      if(!uid) {
+        // If logged out, clear all data
+        incomeData = []; expenseData = []; budgetData = {};
+        renderUI();
+        return;
+      }
 
       const qInc = query(collection(db, 'users', uid, 'income'), orderBy('date', 'desc'));
       unsubIncome = onSnapshot(qInc, (snap) => {
@@ -852,16 +669,13 @@
       }).join('');
       DOM.budgetListContainer.innerHTML = budgetHTML || '<p style="text-align:center; opacity:0.6; padding:20px;">No budgets set.</p>';
 
-      // Update Charts
       updateCharts(catTotals, totalInc, totalExp);
     }
 
     function updateCharts(catTotals = {}, inc = 0, exp = 0) {
-      // Only render if view is active or data changed
       const isDark = !document.body.classList.contains('light');
       const textColor = isDark ? '#e0e0e0' : '#2d3748';
 
-      // Category Chart
       if(categoryChartInstance) categoryChartInstance.destroy();
       categoryChartInstance = new Chart(DOM.catChart, {
         type: 'doughnut',
@@ -879,7 +693,6 @@
         }
       });
 
-      // Trend Chart
       if(trendChartInstance) trendChartInstance.destroy();
       trendChartInstance = new Chart(DOM.trendChart, {
         type: 'bar',
@@ -905,30 +718,21 @@
     document.addEventListener('DOMContentLoaded', () => {
       setupNavigation();
       
-      // Restore Theme
       if(localStorage.getItem('theme') === 'light') {
         document.body.classList.add('light');
         DOM.themeToggle.innerHTML = '<i class="fa-solid fa-sun"></i>';
       }
 
-      // Global Event Listeners
-      document.getElementById('show-register').onclick = () => showSection('register-section');
-      document.getElementById('show-login').onclick = () => showSection('login-section');
-      document.getElementById('login-btn').onclick = login;
-      document.getElementById('register-btn').onclick = register;
+      // --- Global Event Listeners ---
+      // Removed listeners for show-register, show-login, login-btn, register-btn
       document.getElementById('logout-btn').onclick = () => signOut(auth);
-      
       document.getElementById('add-income-btn').onclick = () => handleTransaction('income');
       document.getElementById('add-expense-btn').onclick = () => handleTransaction('expense');
       document.getElementById('set-budget-btn').onclick = setBudget;
       DOM.themeToggle.onclick = toggleTheme;
 
-      // Input Listeners
-      DOM.regUser.oninput = validateRegForm;
-      DOM.regPass.oninput = validateRegForm;
-      DOM.regConfirm.oninput = validateRegForm;
-
-      // Expose helpers to window for inline HTML onclicks
+      // Input Listeners for reg form removed
+      
       window.editItem = editItem;
       window.deleteItem = deleteItem;
     });
@@ -937,12 +741,16 @@
     onAuthStateChanged(auth, async (user) => {
       if(user) {
         const uDoc = await getDoc(doc(db, 'users', user.uid));
-        if(uDoc.exists()) DOM.userDisplayName.textContent = uDoc.data().username;
-        showSection('dashboard');
+        if(uDoc.exists()) {
+           DOM.userDisplayName.textContent = uDoc.data().username;
+        }
+        // No need to call showSection('dashboard'), it's already visible
         attachListeners(user.uid);
       } else {
-        showSection('login-section');
-        attachListeners(null);
+        // --- MODIFIED ---
+        // Don't show login section, just clear the listeners
+        DOM.userDisplayName.textContent = "Guest";
+        attachListeners(null); 
       }
     });
   </script>
